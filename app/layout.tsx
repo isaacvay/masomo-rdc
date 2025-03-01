@@ -9,7 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Masomo RDC",
   description: "Application éducative pour la RDC",
+  icons: {
+    icon: "/images/logo.png",
+  },
 };
+
 
 export default function RootLayout({
   children,
