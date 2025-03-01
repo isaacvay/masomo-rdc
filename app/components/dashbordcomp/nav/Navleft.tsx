@@ -39,8 +39,8 @@ const mainNavItems: NavItemData[] = [
 ];
 
 const teacherNavItems: NavItemData[] = [
+    { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
-  { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des élèves", page: "listeclasses" },
 ];
 
