@@ -1,10 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import Navleft from "../components/dashbordcomp/nav/Navleft";
-import ClassesDashboard from "../components/dashbordcomp/classes/page";
+import ClassesDashboard from "../components/dashbordcomp/classes/classes";
 import EleveForm from "../components/dashbordcomp/formulaire/EleveForm";
 import NotesListeEleve from "../components/dashbordcomp/eleve/NotesListeEleve";
-import Cours from "../components/dashbordcomp/cours/page";
 import OpetionsEtclasse from "../components/dashbordcomp/eleve/OpetionsEtclasse";
 import ListeDesEleves from "../components/dashbordcomp/eleve/ListeDesEleves";
 import ProfesseurForm from "../components/dashbordcomp/formulaire/ProfesseurForm";
@@ -16,6 +15,7 @@ import ListeDesProfs from "../components/dashbordcomp/prof/ListeDesProf";
 import BulletinEleve from "../components/dashbordcomp/bulletin/BulletinEleve";
 import ListeDesCours from "../components/dashbordcomp/prof/listeDesCours";
 import EleveListeDesCours from "../components/dashbordcomp/eleve/EleveListeDesCours";
+import Cours from "../components/dashbordcomp/classes/cours";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
