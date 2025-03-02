@@ -24,27 +24,13 @@ export default function Connexion() {
     }
   }, []);
 
-  // Validation simple du format de l'adresse e-mail
-  interface ConnexionProps {
-    email: string;
-    motDePasse: string;
-    seSouvenir: boolean;
-    error: string;
-    isLoading: boolean;
-    showPassword: boolean;
-  }
-
-  const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  interface UserData {
-    role?: string;
-  }
+  const isValidEmail = (email: string): boolean =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
 
-    // Vérification du format de l'e-mail avant envoi
     if (!isValidEmail(email)) {
       setError("Veuillez entrer une adresse e-mail valide.");
       return;
@@ -59,7 +45,7 @@ export default function Connexion() {
       if (!docSnap.exists()) {
         throw new Error("Le document utilisateur est introuvable.");
       }
-      const data = docSnap.data() as UserData;
+      const data = docSnap.data() as { role?: string };
       const userRole = data.role || "";
       if (userRole === "ecole") {
         router.push("/dashboardPrin");
@@ -77,7 +63,6 @@ export default function Connexion() {
       }
     } catch (err) {
       console.error('Erreur lors de la connexion:', err);
-      // Message d'erreur générique pour éviter de divulguer des informations sensibles
       setError("Erreur lors de la connexion. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
@@ -85,12 +70,12 @@ export default function Connexion() {
   };
 
   return (
-    <div className="min-h-screen mt-10 flex items-center justify-center bg-gradient-to-br from-indigo-100 to-blue-100 relative overflow-hidden">
+    <div className="min-h-screen mt-5 flex items-center justify-center bg-gradient-to-br from-indigo-100 to-blue-100 relative overflow-hidden p-4">
       <div className="absolute inset-0 z-0 flex justify-center items-center">
-        <div className="w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl animate-float"></div>
+        <div className="w-72 h-72 sm:w-96 sm:h-96 bg-indigo-200/40 rounded-full blur-3xl animate-float"></div>
       </div>
 
-      <div className="relative z-10 bg-white p-10 rounded-3xl shadow-xl w-full max-w-md border border-gray-200 backdrop-blur-md transition-all duration-300 hover:shadow-2xl">
+      <div className="relative z-10 bg-white p-6 sm:p-10 rounded-3xl shadow-xl w-full max-w-md border border-gray-200 backdrop-blur-md transition-all duration-300 hover:shadow-2xl">
         <div className="flex flex-col items-center mb-6 space-y-4">
           <div className="p-4 bg-indigo-200 rounded-full shadow-inner">
             <Lock className="w-8 h-8 text-indigo-600 animate-bounce" />
@@ -170,7 +155,9 @@ export default function Connexion() {
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>
             Nouveau ?{' '}
-            <a href="/pages/inscription" className="text-indigo-600 hover:text-indigo-700 font-medium">Créer un compte</a>
+            <a href="/pages/inscription" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              Créer un compte
+            </a>
           </p>
         </div>
       </div>
