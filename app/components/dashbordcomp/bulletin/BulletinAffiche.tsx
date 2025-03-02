@@ -132,11 +132,9 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
         return;
       }
       try {
-        // Accéder à la sous-collection "grades" du document école dans "schools"
         const gradesCollectionRef = collection(doc(firestore, "schools", selectedStudent.schoolId), "grades");
         const querySnapshot = await getDocs(gradesCollectionRef);
         const data: GradeEntry[] = querySnapshot.docs.map((doc) => doc.data() as GradeEntry);
-        // Garder uniquement les notes correspondant à la classe de l'élève sélectionné
         const classEntries = data.filter((entry) => entry.class === selectedStudent.classe);
         setGradeEntries(classEntries);
       } catch (error) {
@@ -222,20 +220,25 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   }), [studentAggregates, selectedStudent]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-      <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-6">
-        <BulletinHeader />
-        <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
-        <BulletinTable 
-          flattenedSubjects={flattenedSubjects}
-          handleSubjectUpdate={handleSubjectUpdate}
-          totals={totals}
-          maxTotals={maxTotals}
-          percentages={percentages}
-          initialGradesMapping={initialGradesMapping}
-          ranking={rankings}
-        />
-        <BulletinFooter />
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
+      {/* Sur mobile, scale-50 pour une version plus miniature, avec origin-top pour conserver l'alignement en haut */}
+      <div className="transform scale-40 md:scale-100 origin-top">
+        <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
+          <BulletinHeader />
+          <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
+          <div className="overflow-x-auto">
+            <BulletinTable 
+              flattenedSubjects={flattenedSubjects}
+              handleSubjectUpdate={handleSubjectUpdate}
+              totals={totals}
+              maxTotals={maxTotals}
+              percentages={percentages}
+              initialGradesMapping={initialGradesMapping}
+              ranking={rankings}
+            />
+          </div>
+          <BulletinFooter />
+        </div>
       </div>
     </div>
   );
