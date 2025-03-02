@@ -50,7 +50,6 @@ export default function ListeEleve({
         return;
       }
       try {
-        // On interroge la collection "users" pour trouver le document du professeur
         const q = query(
           collection(firestore, "users"),
           where("email", "==", currentUser.email),
@@ -67,7 +66,6 @@ export default function ListeEleve({
       } catch (error) {
         console.error("Erreur lors de la récupération du prof :", error);
       }
-      // Si aucun document n'est trouvé, on considère que l'utilisateur connecté est l'école
       setSchoolUid(currentUser.uid);
     };
     loadSchoolUid();
@@ -168,7 +166,6 @@ export default function ListeEleve({
     setActionStatus((prev) => ({ ...prev, [student.numPerm]: "saving" }));
     try {
       if (!schoolUid) throw new Error("Aucune école connectée");
-      // Référence au document de notes dans la sous-collection "grades" de l'école
       const gradeDocRef = doc(
         firestore,
         "schools",
@@ -225,8 +222,8 @@ export default function ListeEleve({
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto p-8">
-      <header className="bg-gradient-to-r flex items-center justify-between from-blue-500 to-blue-700 text-white rounded-xl shadow-lg p-4 mb-4">
+    <div className="max-w-screen-xl mx-auto p-4 sm:p-8">
+      <header className="bg-gradient-to-r flex flex-col sm:flex-row items-center justify-between from-blue-500 to-blue-700 text-white rounded-xl shadow-lg p-4 mb-4 gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">
             {selectedCourse} - {selectedClass}
@@ -238,7 +235,7 @@ export default function ListeEleve({
           placeholder="Rechercher un élève..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-96 p-3 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="w-full sm:w-96 p-3 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
       </header>
 
