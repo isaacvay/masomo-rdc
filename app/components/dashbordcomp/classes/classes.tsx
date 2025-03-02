@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { sections } from "@/data/cours";
 import { colors } from "@/data/colors";
 import { auth, firestore } from "@/config/firebase";
-import { collection, doc, getDocs } from "firebase/firestore";
+import { collection, doc, getDocs, query, where } from "firebase/firestore";
 
 interface ClassesDashboardProps {
   onClassSelect: (className: string) => void;
@@ -17,6 +17,7 @@ interface TitulaireData {
 interface Student {
   eleve: string;
   classe: string;
+  schoolId: string; // Assurez-vous que cette propriété existe dans vos documents utilisateurs
 }
 
 export default function ClassesDashboard({ onClassSelect }: ClassesDashboardProps) {
@@ -44,7 +45,7 @@ export default function ClassesDashboard({ onClassSelect }: ClassesDashboardProp
     fetchTitulaires();
   }, []);
 
-  // Récupération des élèves depuis Firestore
+  // Récupération des élèves depuis Firestore en filtrant par école
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -52,9 +53,10 @@ export default function ClassesDashboard({ onClassSelect }: ClassesDashboardProp
         if (!schoolId) {
           throw new Error("Aucune école connectée");
         }
-        // Si vos élèves sont dans une collection dédiée (ex. "eleves" ou "users"), adaptez le chemin
         const studentsRef = collection(firestore, "users");
-        const snapshot = await getDocs(studentsRef);
+        // Filtrer uniquement les élèves de l'école connectée
+        const q = query(studentsRef, where("schoolId", "==", schoolId));
+        const snapshot = await getDocs(q);
         const data = snapshot.docs.map((doc) => doc.data() as Student);
         setStudents(data);
       } catch (error) {
