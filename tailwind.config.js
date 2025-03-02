@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      scale: {
+        '40': '0.40',
+      },
       animation: {
         'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
         'slide-up': 'slideUp 0.3s ease-out',
