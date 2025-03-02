@@ -3,13 +3,13 @@ import React, { useState, useEffect } from "react";
 import { sections, Section } from "@/data/cours"; // Vos données et interfaces
 import { colors } from "@/data/colors";
 import { auth, firestore } from "@/config/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 // Interface pour les élèves
 interface Student {
   eleve: string;
   classe: string;
-  // D'autres champs si nécessaire...
+  schoolId: string; // Assurez-vous que ce champ existe dans vos documents utilisateurs
 }
 
 interface ListeClassesProps {
@@ -40,7 +40,7 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Récupérer les élèves depuis Firestore
+  // Récupérer les élèves depuis Firestore en filtrant par école
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -49,7 +49,9 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
           throw new Error("Aucune école connectée");
         }
         const usersRef = collection(firestore, "users");
-        const snapshot = await getDocs(usersRef);
+        // Filtrer uniquement les élèves de l'école connectée
+        const q = query(usersRef, where("schoolId", "==", schoolId));
+        const snapshot = await getDocs(q);
         const data: Student[] = snapshot.docs.map((doc) => doc.data() as Student);
         console.log("Données élèves :", data);
         setStudents(data);
