@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       scale: {
         '40': '0.40',
+        '30':'0.30'
       },
       animation: {
         'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
