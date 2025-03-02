@@ -15,7 +15,7 @@ const BulletinHeader: React.FC = () => (
       </h2>
     </div>
     <div className="flex justify-center">
-      <img src="images/armoiries.png" alt="armoirie" className="w-24 h-24" />
+      <img src="images/Armoiries.png" alt="armoirie" className="w-24 h-24" />
     </div>
   </div>
 );
