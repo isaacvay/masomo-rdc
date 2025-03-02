@@ -10,6 +10,7 @@ export default {
     extend: {
       scale: {
         '40': '0.40',
+        '30':'0.30'
       },
       colors: {
         background: "var(--background)",
