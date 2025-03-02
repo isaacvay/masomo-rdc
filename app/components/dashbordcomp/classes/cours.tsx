@@ -198,102 +198,126 @@ export default function Cours({ selectedClass }: CoursProps) {
   }
 
   return (
-    <div className="max-w-6xl my-5 mx-auto p-6 bg-white rounded-2xl shadow-lg">
-      <h1 className="text-3xl font-bold p-4 rounded-md mb-8 bg-blue-600 text-white">
-        Classe : <span>{selectedClass}</span>
-      </h1>
+    <div className="container mx-auto p-4 sm:p-6">
+      <div className="max-w-6xl my-5 mx-auto p-6 bg-white rounded-2xl shadow-lg">
+        <h1 className="text-3xl font-bold p-4 rounded-md mb-8 bg-blue-600 text-white">
+          Classe : <span>{selectedClass}</span>
+        </h1>
 
-      {/* Section Titulaire */}
-      <div className="mb-8 border-b-2 border-gray-200 pb-4">
-        <div className="flex items-center space-x-2 mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <h2 className="text-xl font-semibold text-gray-800">Titulaire de la classe</h2>
+        {/* Section Titulaire */}
+        <div className="mb-8 border-b-2 border-gray-200 pb-4">
+          <div className="flex items-center space-x-2 mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-indigo-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            <h2 className="text-xl font-semibold text-gray-800">Titulaire de la classe</h2>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <select
+              id="tutor"
+              value={selectedTutor}
+              onChange={handleTutorChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300"
+            >
+              {teacherOptions.map((tutor) => (
+                <option key={tutor.id} value={tutor.id}>
+                  {tutor.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={setTitulaire}
+              className="w-full sm:w-72 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-200"
+            >
+              Définir comme Titulaire
+            </button>
+          </div>
+          {currentTutor && (
+            <p className="mt-2 text-gray-600">
+              Titulaire actuel : <strong className="text-black">{currentTutor}</strong>
+            </p>
+          )}
         </div>
-        <div className="flex items-center justify-between">
-          <select
-            id="tutor"
-            value={selectedTutor}
-            onChange={handleTutorChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300"
-          >
-            {teacherOptions.map((tutor) => (
-              <option key={tutor.id} value={tutor.id}>
-                {tutor.name}
-              </option>
-            ))}
-          </select>
+
+        {/* Section Liste des Matières */}
+        <div>
+          <div className="flex items-center space-x-2 mb-6">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-indigo-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            <h2 className="text-xl font-semibold text-gray-800">Liste des Matières</h2>
+          </div>
+          <div className="space-y-4 border border-gray-200 rounded-lg shadow-sm p-4 bg-gray-100">
+            {currentSubjects.map((subject) => {
+              const eligibleTeachers = findTeachersForCourse(subject.name);
+              return (
+                <div key={subject.name} className="flex flex-col sm:flex-row items-center justify-between p-4 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-2">
+                    <span role="img" aria-label={subject.name} className="text-xl">
+                      {subject.icon}
+                    </span>
+                    <h3 className="text-lg font-medium text-gray-800 pl-1">{subject.name}</h3>
+                  </div>
+                  <div className="mt-2 sm:mt-0">
+                    <select
+                      id={`subject-${subject.name}`}
+                      value={selectedTeachers[subject.name] || eligibleTeachers[0]?.id || 0}
+                      onChange={(e) => handleTeacherChange(subject.name, e)}
+                      className="w-full md:w-72 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300"
+                    >
+                      {eligibleTeachers.length > 0 ? (
+                        eligibleTeachers.map((teacher) => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value={0}>Aucun professeur disponible</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Boutons pour sauvegarder ou annuler */}
+        <div className="flex flex-col sm:flex-row justify-end gap-4 mt-6">
           <button
-            onClick={setTitulaire}
-            className="ml-4 w-72 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-200"
+            onClick={saveAssociations}
+            className="w-full sm:w-40 bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200"
           >
-            Définir comme Titulaire
+            Enregistrer
+          </button>
+          <button
+            className="w-full sm:w-40 border border-gray-400 text-black font-semibold py-2 px-4 rounded-md hover:bg-gray-200 transition duration-200"
+          >
+            Annuler
           </button>
         </div>
-        {currentTutor && (
-          <p className="mt-2 text-gray-600">
-            Titulaire actuel : <strong className="text-black">{currentTutor}</strong>
-          </p>
-        )}
-      </div>
-
-      {/* Section Liste des Matières */}
-      <div>
-        <div className="flex items-center space-x-2 mb-6">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <h2 className="text-xl font-semibold text-gray-800">Liste des Matières</h2>
-        </div>
-        <div className="space-y-4 border border-gray-200 rounded-lg shadow-sm p-4 bg-gray-100">
-          {currentSubjects.map((subject) => {
-            const eligibleTeachers = findTeachersForCourse(subject.name);
-            return (
-              <div key={subject.name} className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <span role="img" aria-label={subject.name} className="text-xl">
-                    {subject.icon}
-                  </span>
-                  <h3 className="text-lg font-medium text-gray-800 pl-1">{subject.name}</h3>
-                </div>
-                <div className="ml-4">
-                  <select
-                    id={`subject-${subject.name}`}
-                    value={selectedTeachers[subject.name] || eligibleTeachers[0]?.id || 0}
-                    onChange={(e) => handleTeacherChange(subject.name, e)}
-                    className="w-72 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300"
-                  >
-                    {eligibleTeachers.length > 0 ? (
-                      eligibleTeachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value={0}>Aucun professeur disponible</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Boutons pour sauvegarder ou annuler */}
-      <div className="flex justify-end">
-        <button
-          onClick={saveAssociations}
-          className="mt-6 w-40 bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200"
-        >
-          Enregistrer
-        </button>
-        <button
-          className="mt-6 ml-4 w-40 border border-gray-400 text-black font-semibold py-2 px-4 rounded-md hover:bg-gray-200 transition duration-200"
-        >
-          Annuler
-        </button>
       </div>
     </div>
   );
