@@ -222,7 +222,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
       {/* Sur mobile, scale-50 pour une version plus miniature, avec origin-top pour conserver l'alignement en haut */}
-      <div className="transform scale-40 md:scale-100 origin-top">
+      <div className="transform scale-30 md:scale-100 origin-top">
         <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
           <BulletinHeader />
           <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
