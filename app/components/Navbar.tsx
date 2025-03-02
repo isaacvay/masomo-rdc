@@ -68,7 +68,7 @@ function Navbar() {
             }}
             className="hidden md:inline-block px-6 py-3 bg-[#e69f25] text-white font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105"
           >
-            Dashboard
+           Tableau de bord
           </button>
         ) : (
           <button
@@ -172,7 +172,7 @@ function Navbar() {
                     }}
                     className="px-6 py-3 bg-[#e69f25] text-white font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300"
                   >
-                    Dashboard
+                   Tableau de bord
                   </button>
                 ) : (
                   <button
