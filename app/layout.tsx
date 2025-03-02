@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Masomo RDC",
   description: "Application éducative pour la RDC",
   icons: {
-    icon: "/images/icon.ico",
+    icon: "/images/icon0.ico",
   },
 };
 
