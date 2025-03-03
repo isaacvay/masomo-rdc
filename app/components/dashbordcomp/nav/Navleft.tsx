@@ -50,8 +50,8 @@ const studentNavItems: NavItemData[] = [
 ];
 
 const schoolNavItems: NavItemData[] = [
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Enregistrement Prof", page: "EnregistrementProfesseur" },
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Enregistrement Élève", page: "EnregistrementEleve" },
+  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Ajouter un Prof", page: "EnregistrementProfesseur" },
+  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscription élève", page: "EnregistrementEleve" },
     { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Classes et Cours", page: "ClassesEtCours" },
   { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des profs", page: "listeprof" },
   { icon: <ChartBarIcon className="h-6 w-6" />, label: "Élèves par classe", page: "elevesparclasse" },
