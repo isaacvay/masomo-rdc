@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useCallback } from "react";
 import { auth, firestore } from "@/config/firebase";
 import { updateDoc, doc } from "firebase/firestore";
@@ -145,11 +144,10 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
               <SectionTitle icon={<UserCircle className="h-5 w-5" />} title="Informations" />
               
               <EditableField
-                editMode={editMode}
+                editMode={false}
                 label="Email"
                 icon={<Mail className="h-5 w-5" />}
                 value={formData.email}
-                onChange={(v) => setFormData(prev => ({ ...prev, email: v }))}
                 type="email"
                 onCopy={() => handleCopy(formData.email, "email")}
                 copied={copiedField === "email"}
@@ -168,11 +166,10 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
               <SectionTitle icon={<Lock className="h-5 w-5" />} title="Sécurité" />
               
               <EditableField
-                editMode={editMode}
+                editMode={false}
                 label="Mot de passe"
                 icon={<Lock className="h-5 w-5" />}
                 value={formData.password}
-                onChange={(v) => setFormData(prev => ({ ...prev, password: v }))}
                 type="password"
                 masked
                 onCopy={() => handleCopy(formData.password, "password")}
@@ -324,7 +321,7 @@ const EditableField = ({
   label: string;
   icon: React.ReactNode;
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   type?: string;
   masked?: boolean;
   onCopy?: () => void;
@@ -337,7 +334,7 @@ const EditableField = ({
     <div className="flex items-center gap-3 justify-between">
       <div className="flex items-center gap-3 flex-1">
         <div className="text-indigo-600">{icon}</div>
-        {editMode ? (
+        {editMode && onChange ? (
           <div className="relative flex-1">
             <input
               type={type === "password" ? (showPassword ? "text" : "password") : type}
@@ -345,7 +342,7 @@ const EditableField = ({
               onChange={(e) => onChange(e.target.value)}
               className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
             />
-            {type === "password" && (
+            {type === "password" && togglePassword && (
               <button
                 type="button"
                 onClick={togglePassword}
