@@ -1,10 +1,11 @@
+// ListeDesProfs.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { auth, firestore } from "@/config/firebase";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import ProfileProf from "./ProfileProf"; // Composant pour afficher le profil du prof
+import { collection, query, where, getDocs } from "firebase/firestore";
+import ProfileProf from "./ProfileProf";
+import ListeProfMP from "./ListeProfMP"; // Nouvel import
 
-// Interface pour typer un professeur depuis la collection "users"
 interface Prof {
   id: string;
   displayName: string;
@@ -13,16 +14,16 @@ interface Prof {
   courses?: string[];
   schoolId: string;
   role: string;
+  password?: string; // Ajoutez cette ligne
 }
 
-interface ListeDesProfsProps {}
-
-export default function ListeDesProfs({}: ListeDesProfsProps) {
+export default function ListeDesProfs() {
   const [profs, setProfs] = useState<Prof[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProf, setSelectedProf] = useState<Prof | null>(null);
+  const [showListeProfMP, setShowListeProfMP] = useState(false); // Nouvel état
 
   useEffect(() => {
     const fetchProfs = async () => {
@@ -30,8 +31,6 @@ export default function ListeDesProfs({}: ListeDesProfsProps) {
         const currentUser = auth.currentUser;
         if (!currentUser) throw new Error("Aucune école connectée");
 
-        // Dans la nouvelle architecture, les professeurs se trouvent dans la collection "users"
-        // avec un champ "role" de type "prof" ou "professeur" et un "schoolId" correspondant à l'école.
         const profsCollection = collection(firestore, "users");
         const q = query(
           profsCollection,
@@ -54,7 +53,6 @@ export default function ListeDesProfs({}: ListeDesProfsProps) {
     fetchProfs();
   }, []);
 
-  // Filtrer les professeurs par recherche (en se basant sur le displayName)
   const filteredProfs = profs.filter((prof) =>
     prof.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -77,11 +75,15 @@ export default function ListeDesProfs({}: ListeDesProfsProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {selectedProf ? (
+      {showListeProfMP ? (
+        <ListeProfMP
+          profs={filteredProfs}
+          onRetour={() => setShowListeProfMP(false)}
+        />
+      ) : selectedProf ? (
         <ProfileProf {...selectedProf} onRetour={() => setSelectedProf(null)} />
       ) : (
         <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden">
-          {/* En-tête avec barre de recherche */}
           <div className="bg-blue-600 p-4 flex flex-col md:flex-row items-center justify-between">
             <h2 className="text-3xl text-white font-bold mb-2 md:mb-0">
               Liste des professeurs
@@ -94,11 +96,18 @@ export default function ListeDesProfs({}: ListeDesProfsProps) {
               className="w-full md:w-1/3 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
-          {/* Liste des professeurs */}
           <div className="p-4 text-start">
-            <h3 className="px-2 py-5 text-2xl font-semibold text-gray-800">
-              <strong className="text-3xl">📋</strong> Liste des professeurs
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="px-2 py-5 text-2xl font-semibold text-gray-800">
+                <strong className="text-3xl">📋</strong> Liste des professeurs
+              </h3>
+              <div
+                className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded cursor-pointer"
+                onClick={() => setShowListeProfMP(true)}
+              >
+                Imprimer
+              </div>
+            </div>
             <div className="p-4 bg-gray-200 rounded-lg overflow-hidden">
               <ul className="divide-y-4 divide-gray-200 bg-white rounded-lg">
                 {filteredProfs.map((prof) => (
