@@ -24,17 +24,68 @@ export default function ListeProfMP({ profs, onRetour, loading, error }: ListePr
   };
 
   const handlePrint = () => {
-    const originalContents = document.body.innerHTML;
-    const printContent = document.getElementById("printable-area")?.outerHTML;
-    if (printContent) {
-      document.body.innerHTML = printContent;
-      window.print();
-      document.body.innerHTML = originalContents;
-    }
+    const printContent = document.getElementById("printable-area");
+    if (!printContent) return;
+
+    // Ouvrir une nouvelle fenêtre pour l'impression
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    // Cloner le contenu à imprimer
+    const clone = printContent.cloneNode(true) as HTMLElement;
+
+    // Pour l'impression, si besoin d'afficher en clair les mots de passe, vous pouvez vérifier 
+    // s'il existe des éléments avec l'attribut data-password et remplacer leur contenu.
+    const passwordSpans = clone.querySelectorAll("[data-password]");
+    passwordSpans.forEach(span => {
+      const password = span.getAttribute("data-password");
+      if (password) span.textContent = password;
+    });
+
+    // Supprimer les boutons inutiles dans l'impression
+    const buttons = clone.querySelectorAll("button");
+    buttons.forEach(btn => btn.remove());
+
+    // Ecrire le contenu dans la nouvelle fenêtre
+    printWindow.document.open();
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Impression</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              padding: 20px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #ccc;
+              padding: 8px;
+              text-align: left;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${clone.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   if (loading) {
-    return <div className="p-6 text-center text-gray-500 animate-pulse">Chargement en cours...</div>;
+    return (
+      <div className="p-6 text-center text-gray-500 animate-pulse">
+        Chargement en cours...
+      </div>
+    );
   }
 
   if (error) {
@@ -60,6 +111,7 @@ export default function ListeProfMP({ profs, onRetour, loading, error }: ListePr
         <button
           className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
           onClick={onRetour}
+          aria-label="Retour à la page précédente"
         >
           <FaArrowLeft className="shrink-0" />
           <span>Retour</span>
@@ -67,6 +119,7 @@ export default function ListeProfMP({ profs, onRetour, loading, error }: ListePr
         <button
           className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
           onClick={handlePrint}
+          aria-label="Imprimer la liste"
         >
           <FaPrint className="shrink-0" />
           <span>Imprimer</span>
@@ -110,8 +163,22 @@ export default function ListeProfMP({ profs, onRetour, loading, error }: ListePr
                   </td>
                   <td className="px-6 py-4 print:px-4 print:py-3">
                     <div className="flex items-center gap-2">
-                      {prof.password || (
+                      {prof.password ? (
+                        // Ajout d'un attribut data-password pour permettre l'affichage complet lors de l'impression
+                        <span className="font-mono" data-password={prof.password}>
+                          {showPasswords[prof.id] ? prof.password : "••••••••"}
+                        </span>
+                      ) : (
                         <span className="text-gray-400">N/A</span>
+                      )}
+                      {prof.password && (
+                        <button
+                          onClick={() => togglePasswordVisibility(prof.id)}
+                          className="text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none"
+                          aria-label={showPasswords[prof.id] ? "Cacher le mot de passe" : "Afficher le mot de passe"}
+                        >
+                          {showPasswords[prof.id] ? <FaEyeSlash /> : <FaEye />}
+                        </button>
                       )}
                     </div>
                   </td>
