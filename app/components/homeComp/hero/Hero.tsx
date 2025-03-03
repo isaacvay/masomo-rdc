@@ -1,16 +1,26 @@
-"use client"; // Indique que ce composant est un Client Component
+"use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image"; // Pour le mockup 3D
+import { auth } from "@/config/firebase"; // Assurez-vous que Firebase Auth est bien configuré
 
 function Hero() {
   const [isQrCodeChecked, setIsQrCodeChecked] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Effet pour changer automatiquement l'icône après 3 secondes
+  // Vérifier l'état de connexion de l'utilisateur
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsConnected(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Changer automatiquement l'icône après 3 secondes
   useEffect(() => {
     const timeout = setTimeout(() => {
       setIsQrCodeChecked(true);
     }, 3000); // 3 secondes
-    return () => clearTimeout(timeout); // Nettoyer le timeout lors du démontage
+    return () => clearTimeout(timeout);
   }, []);
 
   return (
@@ -47,19 +57,32 @@ function Hero() {
           </p>
           {/* Boutons CTA */}
           <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
-            <button onClick={
-              () => {
-                window.location.href = "/pages/connexion";
-              }
-            } className="px-8 py-4 bg-cyan-200 text-[#0D1B2A] font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105">
-              Commencer
-            </button>
-            <button onClick={
-              () => {
+            {isConnected ? (
+              <button
+                onClick={() => {
+                  window.location.href = "/dashboardPrin";
+                }}
+                className="px-8 py-4 bg-cyan-200 text-[#0D1B2A] font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105"
+              >
+                Accéder à mon espace
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  window.location.href = "/pages/connexion";
+                }}
+                className="px-8 py-4 bg-cyan-200 text-[#0D1B2A] font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105"
+              >
+                Commencer
+              </button>
+            )}
+            <button
+              onClick={() => {
                 window.location.href = "/pages/verification-bulletin";
-              }
-            } className="px-8 py-4 bg-white border-2 border-[#0D1B2A] text-[#0D1B2A] font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105">
-              Verifier le bulletin
+              }}
+              className="px-8 py-4 bg-white border-2 border-[#0D1B2A] text-[#0D1B2A] font-semibold rounded-full shadow-md hover:shadow-lg transition duration-300 transform hover:scale-105"
+            >
+              Vérifier le bulletin
             </button>
           </div>
         </div>
@@ -67,7 +90,6 @@ function Hero() {
         <div className="grid grid-cols-2 gap-4">
           {/* Bloc 1 : Graphique */}
           <div className="relative w-full h-64 rounded-2xl overflow-hidden shadow-lg bg-cyan-200 flex items-center justify-center">
-            {/* Conteneur pour réduire la taille de l'image */}
             <div className="relative w-60 h-60">
               <Image
                 src="/images/bulletin.png" // Remplacez par votre image d'avatar
@@ -147,40 +169,20 @@ function Hero() {
 // Animations personnalisées avec CSS pur
 const styles = `
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .animate-fade-in {
-    animation: fadeIn 1s ease-in-out;
-  }
+  .animate-fade-in { animation: fadeIn 1s ease-in-out; }
   @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.1);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
   }
-  .animate-pulse {
-    animation: pulse 2s infinite ease-in-out;
-  }
+  .animate-pulse { animation: pulse 2s infinite ease-in-out; }
   @keyframes bounce {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
-  .animate-bounce {
-    animation: bounce 1s infinite ease-in-out;
-  }
+  .animate-bounce { animation: bounce 1s infinite ease-in-out; }
 `;
 
 export default function HeroWithStyles() {
