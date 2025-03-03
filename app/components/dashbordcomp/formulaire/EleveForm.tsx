@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signOut,
+  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { sections } from "@/data/cours";
@@ -44,9 +45,20 @@ export default function AddEleve() {
       return;
     }
     try {
-      // Génération du mot de passe et de l'email de l'élève
+      // Génération du mot de passe
       const password = generateRandomPassword();
-      const email = `${name.toLowerCase().replace(/\s+/g, "")}@elev.masomordc.cd`;
+
+      // Génération de l'email de base sans suffixe
+      const baseEmail = `${name.toLowerCase().replace(/\s+/g, "")}@elev.masomordc.cd`;
+      let email = baseEmail;
+
+      // Vérification de l'existence de l'email
+      const signInMethods = await fetchSignInMethodsForEmail(secondaryAuth, email);
+      if (signInMethods.length > 0) {
+        // Si l'email existe, ajouter un suffixe aléatoire
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        email = `${name.toLowerCase().replace(/\s+/g, "")}.${randomSuffix}@elev.masomordc.cd`;
+      }
 
       // Création du compte élève avec l'instance secondaire
       const userCredential = await createUserWithEmailAndPassword(
@@ -98,12 +110,8 @@ Mot de passe : ${password}`);
       setClasse("");
       setNumPerm("");
     } catch (error: unknown) {
-      let errorMessage = "Une erreur est survenue";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       console.error("Erreur lors de l'ajout de l'élève :", error);
-      alert(errorMessage);
+      alert("Une erreur est survenue lors de la création de l'élève. Veuillez réessayer.");
     }
   };
 
