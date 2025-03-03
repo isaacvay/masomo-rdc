@@ -119,7 +119,6 @@ export default function ProfileEleve({
             <div className="space-y-6">
               <SectionTitle icon={<UserCircle className="h-5 w-5" />} title="Informations Personnelles" />
 
-              {/* Pour le champ Sexe, suppression de l'option "onCopy" */}
               <EditableField
                 editMode={editMode}
                 label="Sexe"
@@ -174,13 +173,14 @@ export default function ProfileEleve({
           <div className="space-y-6">
             <SectionTitle icon={<Key className="h-5 w-5" />} title="Identifiants" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* L'email reste en lecture seule */}
               <EditableField
-                editMode={editMode}
+                editMode={false}
                 label="Email"
                 icon={<Mail className="h-5 w-5" />}
                 value={editableProfile.email}
-                onChange={(v) => handleChange("email", v)}
                 inputType="email"
+                onChange={() => {}}
                 onCopy={() => handleCopy(editableProfile.email, "email")}
                 copied={copiedField === "email"}
               />
