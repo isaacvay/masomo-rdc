@@ -23,32 +23,75 @@ interface ListeEleveMPProps {
   error: string | null;
 }
 
-export default function ListeEleveMP({ eleves, onRetour, loading, error, classe, section }: ListeEleveMPProps) {
+export default function ListeEleveMP({
+  eleves,
+  onRetour,
+  loading,
+  error,
+  classe,
+  section,
+}: ListeEleveMPProps) {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   const togglePasswordVisibility = (studentId: string) => {
-    setShowPasswords(prev => ({ ...prev, [studentId]: !prev[studentId] }));
+    setShowPasswords((prev) => ({ ...prev, [studentId]: !prev[studentId] }));
   };
 
   const handlePrint = () => {
-    const originalContents = document.body.innerHTML;
-    const printContent = document.getElementById("printable-area")?.cloneNode(true) as HTMLElement;
+    const printContent = document.getElementById("printable-area");
+    if (!printContent) return;
 
-    if (printContent) {
-      // Afficher tous les mots de passe pour l'impression
-      const passwordSpans = printContent.querySelectorAll('[data-password]');
-      passwordSpans.forEach(span => {
-        const password = span.getAttribute('data-password');
-        if (password) span.textContent = password;
-      });
+    // Ouvrir une nouvelle fenêtre pour l'impression
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
-      // Masquer les éléments inutiles à l'impression
-      printContent.querySelectorAll('button').forEach(btn => btn.remove());
-      
-      document.body.innerHTML = printContent.outerHTML;
-      window.print();
-      document.body.innerHTML = originalContents;
-    }
+    // Cloner le contenu à imprimer
+    const clone = printContent.cloneNode(true) as HTMLElement;
+
+    // Pour l'impression, afficher les mots de passe en clair
+    const passwordSpans = clone.querySelectorAll("[data-password]");
+    passwordSpans.forEach((span) => {
+      const password = span.getAttribute("data-password");
+      if (password) span.textContent = password;
+    });
+
+    // Supprimer les boutons inutiles dans l'impression
+    const buttons = clone.querySelectorAll("button");
+    buttons.forEach((btn) => btn.remove());
+
+    // Ecrire le contenu dans la nouvelle fenêtre
+    printWindow.document.open();
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Impression</title>
+          <style>
+            /* Vous pouvez copier ici vos styles ou lier vos fichiers CSS */
+            body {
+              font-family: sans-serif;
+              padding: 20px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #ccc;
+              padding: 8px;
+              text-align: left;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${clone.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   if (loading) {
@@ -102,7 +145,7 @@ export default function ListeEleveMP({ eleves, onRetour, loading, error, classe,
         <h2 className="text-3xl font-bold text-gray-800 text-center print:text-2xl">
           Liste des élèves
         </h2>
-        <div className=" pl-5 space-y-1">
+        <div className="pl-5 space-y-1">
           <p className="text-xl text-gray-800 print:text-lg">
             Section : <span className="font-semibold">{eleves[0].section}</span>
           </p>
@@ -122,20 +165,23 @@ export default function ListeEleveMP({ eleves, onRetour, loading, error, classe,
           <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 print:bg-gray-100">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
                   Nom
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
                   Email
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 print:px-4 print:py-3">
                   Mot de passe
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {eleves.map((eleve) => (
-                <tr key={eleve.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <tr
+                  key={eleve.id}
+                  className="hover:bg-gray-50 transition-colors duration-150"
+                >
                   <td className="px-6 py-4 text-gray-900 font-medium print:px-4 print:py-3">
                     {eleve.displayName}
                   </td>
@@ -145,16 +191,22 @@ export default function ListeEleveMP({ eleves, onRetour, loading, error, classe,
                   <td className="px-6 py-4 print:px-4 print:py-3">
                     {eleve.password ? (
                       <div className="flex items-center gap-2">
-                        <span 
+                        <span
                           className="font-mono"
                           data-password={eleve.password}
                         >
-                          {showPasswords[eleve.id] ? eleve.password : '••••••••'}
+                          {showPasswords[eleve.id]
+                            ? eleve.password
+                            : "••••••••"}
                         </span>
                         <button
                           onClick={() => togglePasswordVisibility(eleve.id)}
                           className="text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none"
-                          aria-label={showPasswords[eleve.id] ? "Cacher le mot de passe" : "Afficher le mot de passe"}
+                          aria-label={
+                            showPasswords[eleve.id]
+                              ? "Cacher le mot de passe"
+                              : "Afficher le mot de passe"
+                          }
                         >
                           {showPasswords[eleve.id] ? <FaEyeSlash /> : <FaEye />}
                         </button>
