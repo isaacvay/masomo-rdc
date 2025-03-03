@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import ProfileEleve from "./ProfileEleve";
 import BulletinAffiche from "../bulletin/BulletinAffiche";
+import ListeEleveMP from "./ListeEleveMP"; // Assurez-vous que le chemin est correct
 import {
   UserCircle,
   Search,
@@ -60,6 +61,7 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
   const [checkedStates, setCheckedStates] = useState<{ [key: string]: boolean }>({});
   const [showBulletin, setShowBulletin] = useState(false);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
+  const [showPrintView, setShowPrintView] = useState(false);
 
   useEffect(() => {
     const fetchSchoolInfo = async () => {
@@ -175,6 +177,23 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
     );
   }
 
+  // Si l'utilisateur a cliqué sur "Imprimer", afficher le composant ListeEleveMP
+  if (showPrintView) {
+    return (
+      <ListeEleveMP 
+        displayName="Nom Élève" 
+        section="Section Exemple" 
+        classe={selectedClass} 
+        email="email@example.com" 
+        password="motdepasse" 
+        onRetour={() => setShowPrintView(false)}
+        eleves={students}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8">
       {selectedStudent ? (
@@ -248,12 +267,23 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
             <div className="p-6">
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
-                    <GanttChartSquare className="h-7 w-7 text-indigo-600" />
-                    <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                      Gestion des Évaluations
-                    </span>
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+                        <GanttChartSquare className="h-7 w-7 text-indigo-600" />
+                        <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                          Gestion des Évaluations
+                        </span>
+                      </h2>
+                    </div>
+                    {/* Bouton Imprimer */}
+                    <div
+                      onClick={() => setShowPrintView(true)}
+                      className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded cursor-pointer"
+                    >
+                      Imprimer
+                    </div>
+                  </div>
                 </div>
                 <ul className="divide-y divide-gray-100">
                   {filteredStudents.map((student) => (
