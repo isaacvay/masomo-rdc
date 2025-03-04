@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
+import { FaPrint } from 'react-icons/fa';
 import BulletinHeader from './BulletinHeader';
 import BulletinInfo from './BulletinInfo';
 import BulletinTable from './BulletinTable';
@@ -101,6 +102,51 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
       updatedGrades[index] = grades;
       return updatedGrades;
     });
+  };
+
+  // Fonction d'impression similaire à votre exemple
+  const handlePrint = () => {
+    const printContent = document.getElementById("printable-area");
+    if (!printContent) return;
+
+    // Ouvrir une nouvelle fenêtre pour l'impression
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    // Cloner le contenu à imprimer
+    const clone = printContent.cloneNode(true) as HTMLElement;
+
+    // Supprimer les boutons qui ne doivent pas apparaître dans l'impression
+    const buttons = clone.querySelectorAll("button");
+    buttons.forEach((btn) => btn.remove());
+
+    // Écrire le contenu cloné dans la nouvelle fenêtre avec quelques styles de base
+    printWindow.document.open();
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Impression du bulletin</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              padding: 20px;
+            }
+            .bg-gray-100, .bg-white, .shadow-2xl, .rounded-xl {
+              box-shadow: none !important;
+              border: none !important;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${clone.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   // Calcul des totaux et pourcentages
@@ -221,8 +267,19 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
-      {/* Sur mobile, scale-50 pour une version plus miniature, avec origin-top pour conserver l'alignement en haut */}
-      <div className="transform scale-30 md:scale-100 origin-top">
+      {/* Bouton d'impression (non affiché en impression grâce à print:hidden) */}
+      <div className="w-full max-w-6xl flex justify-end mb-4 print:hidden">
+        <button 
+          onClick={handlePrint} 
+          className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-600 transition-colors flex items-center gap-2"
+          aria-label="Imprimer le bulletin"
+        >
+          <FaPrint />
+          <span>Imprimer</span>
+        </button>
+      </div>
+      {/* Zone à imprimer */}
+      <div id="printable-area" className="transform scale-30 md:scale-100 origin-top">
         <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
           <BulletinHeader />
           <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
