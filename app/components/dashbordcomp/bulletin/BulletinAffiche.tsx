@@ -104,7 +104,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     });
   };
 
-  // Fonction d'impression similaire à votre exemple
+  // Fonction d'impression avec les règles CSS pour une impression sur une seule page
   const handlePrint = () => {
     const printContent = document.getElementById("printable-area");
     if (!printContent) return;
@@ -116,11 +116,11 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     // Cloner le contenu à imprimer
     const clone = printContent.cloneNode(true) as HTMLElement;
 
-    // Supprimer les boutons qui ne doivent pas apparaître dans l'impression
+    // Supprimer les boutons qui ne doivent pas apparaître lors de l'impression
     const buttons = clone.querySelectorAll("button");
     buttons.forEach((btn) => btn.remove());
 
-    // Écrire le contenu cloné dans la nouvelle fenêtre avec quelques styles de base
+    // Écrire le contenu cloné dans la nouvelle fenêtre avec les styles d'impression
     printWindow.document.open();
     printWindow.document.write(`
       <html>
@@ -135,8 +135,25 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
               box-shadow: none !important;
               border: none !important;
             }
+            /* Règles spécifiques pour l'impression */
             @media print {
-              body { -webkit-print-color-adjust: exact; }
+              /* Rétablir l'échelle pour le contenu imprimé */
+              #printable-area {
+                transform: none !important;
+                width: 100%;
+              }
+              /* Définir la taille et les marges de la page */
+              @page {
+                size: A4 portrait;
+                margin: 10mm;
+              }
+              /* Masquer les éléments non souhaités lors de l'impression */
+              .print\\:hidden, button {
+                display: none !important;
+              }
+              body {
+                -webkit-print-color-adjust: exact;
+              }
             }
           </style>
         </head>
