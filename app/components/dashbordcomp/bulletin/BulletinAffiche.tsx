@@ -1,20 +1,20 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
-import { FaPrint } from 'react-icons/fa';
-import BulletinHeader from './BulletinHeader';
-import BulletinInfo from './BulletinInfo';
-import BulletinTable from './BulletinTable';
-import BulletinFooter from './BulletinFooter';
-import { sections, Subject } from '@/data/cours';
+import React, { useState, useMemo, useEffect } from "react";
+import { FaPrint } from "react-icons/fa";
+import BulletinHeader from "./BulletinHeader";
+import BulletinInfo from "./BulletinInfo";
+import BulletinTable from "./BulletinTable";
+import BulletinFooter from "./BulletinFooter";
+import { sections, Subject } from "@/data/cours";
 import {
   calculateTotals,
   calculateMaxTotals,
   calculatePercentage,
   Totals,
   MaxTotals,
-} from '@/utils/operations';
-import { firestore } from '@/config/firebase';
-import { collection, getDocs, doc } from 'firebase/firestore';
+} from "@/utils/operations";
+import { firestore } from "@/config/firebase";
+import { collection, getDocs, doc } from "firebase/firestore";
 
 export interface BulletinAfficheProps {
   selectedStudent: {
@@ -40,7 +40,7 @@ interface GradeEntry {
   studentId?: string;
   studentName: string;
   numPerm: string;
-  grades: string[]; // Les notes sont sauvegardées sous forme de chaînes
+  grades: string[];
   course: string;
   class: string;
   timestamp: string;
@@ -73,27 +73,43 @@ interface Rankings {
   overall: { rank: number; total: number };
 }
 
-const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo }) => {
+const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
+  selectedStudent,
+  schoolInfo,
+}) => {
   // Filtrer les sections selon la classe de l'élève
   const filteredSections = useMemo(
-    () => sections.filter((section) => section.classe.includes(selectedStudent.classe)),
+    () =>
+      sections.filter((section) =>
+        section.classe.includes(selectedStudent.classe)
+      ),
     [selectedStudent.classe]
   );
 
   // Calculer le nombre total de matières (toutes sections confondues)
   const totalSubjects = useMemo(
-    () => filteredSections.reduce((count, section) => count + section.subjects.length, 0),
+    () =>
+      filteredSections.reduce(
+        (count, section) => count + section.subjects.length,
+        0
+      ),
     [filteredSections]
   );
 
   // État pour stocker les notes (6 valeurs par matière)
   const [allGrades, setAllGrades] = useState<number[][]>(
-    Array(totalSubjects).fill(null).map(() => Array(6).fill(0))
+    Array(totalSubjects)
+      .fill(null)
+      .map(() => Array(6).fill(0))
   );
 
   // Réinitialiser les notes si le nombre de matières change
   useEffect(() => {
-    setAllGrades(Array(totalSubjects).fill(null).map(() => Array(6).fill(0)));
+    setAllGrades(
+      Array(totalSubjects)
+        .fill(null)
+        .map(() => Array(6).fill(0))
+    );
   }, [totalSubjects]);
 
   const handleSubjectUpdate = (index: number, grades: number[]) => {
@@ -104,71 +120,20 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     });
   };
 
-  // Fonction d'impression avec les règles CSS pour une impression sur une seule page
+  // Utiliser window.print() avec les styles globaux pour l'impression
   const handlePrint = () => {
-    const printContent = document.getElementById("printable-area");
-    if (!printContent) return;
-
-    // Ouvrir une nouvelle fenêtre pour l'impression
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    // Cloner le contenu à imprimer
-    const clone = printContent.cloneNode(true) as HTMLElement;
-
-    // Supprimer les boutons qui ne doivent pas apparaître lors de l'impression
-    const buttons = clone.querySelectorAll("button");
-    buttons.forEach((btn) => btn.remove());
-
-    // Écrire le contenu cloné dans la nouvelle fenêtre avec les styles d'impression
-    printWindow.document.open();
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Impression du bulletin</title>
-          <style>
-            body {
-              font-family: sans-serif;
-              padding: 20px;
-            }
-            .bg-gray-100, .bg-white, .shadow-2xl, .rounded-xl {
-              box-shadow: none !important;
-              border: none !important;
-            }
-            /* Règles spécifiques pour l'impression */
-            @media print {
-              /* Rétablir l'échelle pour le contenu imprimé */
-              #printable-area {
-                transform: none !important;
-                width: 100%;
-              }
-              /* Définir la taille et les marges de la page */
-              @page {
-                size: A4 portrait;
-                margin: 10mm;
-              }
-              /* Masquer les éléments non souhaités lors de l'impression */
-              .print\\:hidden, button {
-                display: none !important;
-              }
-              body {
-                -webkit-print-color-adjust: exact;
-              }
-            }
-          </style>
-        </head>
-        <body>${clone.outerHTML}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    window.print();
   };
 
   // Calcul des totaux et pourcentages
-  const totals: Totals = useMemo(() => calculateTotals(allGrades), [allGrades]);
-  const maxTotals: MaxTotals = useMemo(() => calculateMaxTotals(filteredSections), [filteredSections]);
+  const totals: Totals = useMemo(
+    () => calculateTotals(allGrades),
+    [allGrades]
+  );
+  const maxTotals: MaxTotals = useMemo(
+    () => calculateMaxTotals(filteredSections),
+    [filteredSections]
+  );
   const percentages = {
     percent1erP: calculatePercentage(totals.sum1erP, maxTotals.sumMax1erP),
     percent2emeP: calculatePercentage(totals.sum2emeP, maxTotals.sumMax2emeP),
@@ -178,12 +143,18 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     percent4emeP: calculatePercentage(totals.sum4emeP, maxTotals.sumMax4emeP),
     percentExam2: calculatePercentage(totals.sumExam2, maxTotals.sumMaxExam2),
     percentTotal2: calculatePercentage(totals.sumTotal2, maxTotals.sumMaxTotal2),
-    percentGeneral: calculatePercentage(totals.sumGeneral, maxTotals.totalMaxGeneralDisplayed),
+    percentGeneral: calculatePercentage(
+      totals.sumGeneral,
+      maxTotals.totalMaxGeneralDisplayed
+    ),
   };
 
   // Aplatir la liste des matières pour le rendu
   const flattenedSubjects = useMemo(() => {
-    return filteredSections.reduce((acc, section) => acc.concat(section.subjects), [] as Subject[]);
+    return filteredSections.reduce(
+      (acc, section) => acc.concat(section.subjects),
+      [] as Subject[]
+    );
   }, [filteredSections]);
 
   // Récupérer les entrées de notes depuis Firestore pour TOUS les élèves de la classe
@@ -191,14 +162,23 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   useEffect(() => {
     async function fetchGrades() {
       if (!selectedStudent.schoolId) {
-        console.log("schoolId non défini dans selectedStudent, attente...");
+        console.log(
+          "schoolId non défini dans selectedStudent, attente..."
+        );
         return;
       }
       try {
-        const gradesCollectionRef = collection(doc(firestore, "schools", selectedStudent.schoolId), "grades");
+        const gradesCollectionRef = collection(
+          doc(firestore, "schools", selectedStudent.schoolId),
+          "grades"
+        );
         const querySnapshot = await getDocs(gradesCollectionRef);
-        const data: GradeEntry[] = querySnapshot.docs.map((doc) => doc.data() as GradeEntry);
-        const classEntries = data.filter((entry) => entry.class === selectedStudent.classe);
+        const data: GradeEntry[] = querySnapshot.docs.map((doc) =>
+          doc.data() as GradeEntry
+        );
+        const classEntries = data.filter(
+          (entry) => entry.class === selectedStudent.classe
+        );
         setGradeEntries(classEntries);
       } catch (error) {
         console.error("Erreur lors de la récupération des notes :", error);
@@ -224,21 +204,34 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
 
   // Calcul des agrégats pour chaque élève de la classe (pour le classement)
   const studentAggregates: StudentAggregate[] = useMemo(() => {
-    const aggregatesMap = new Map<string, {
-      firstP: number;
-      secondP: number;
-      exam1: number;
-      total1: number;
-      thirdP: number;
-      fourthP: number;
-      exam2: number;
-      total2: number;
-      overall: number;
-    }>();
+    const aggregatesMap = new Map<
+      string,
+      {
+        firstP: number;
+        secondP: number;
+        exam1: number;
+        total1: number;
+        thirdP: number;
+        fourthP: number;
+        exam2: number;
+        total2: number;
+        overall: number;
+      }
+    >();
     gradeEntries.forEach((entry) => {
       let agg = aggregatesMap.get(entry.numPerm);
       if (!agg) {
-        agg = { firstP: 0, secondP: 0, exam1: 0, total1: 0, thirdP: 0, fourthP: 0, exam2: 0, total2: 0, overall: 0 };
+        agg = {
+          firstP: 0,
+          secondP: 0,
+          exam1: 0,
+          total1: 0,
+          thirdP: 0,
+          fourthP: 0,
+          exam2: 0,
+          total2: 0,
+          overall: 0,
+        };
         aggregatesMap.set(entry.numPerm, agg);
       }
       const g = entry.grades.map((g) => {
@@ -263,58 +256,100 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   }, [gradeEntries]);
 
   // Fonction de classement pour une catégorie donnée
-  const rankFor = (category: keyof StudentAggregate['aggregates']) => {
-    const sorted = studentAggregates.slice().sort((a, b) => b.aggregates[category] - a.aggregates[category]);
+  const rankFor = (category: keyof StudentAggregate["aggregates"]) => {
+    const sorted = studentAggregates
+      .slice()
+      .sort((a, b) => b.aggregates[category] - a.aggregates[category]);
     const total = sorted.length;
-    const index = sorted.findIndex((item) => item.numPerm === selectedStudent.numPerm);
+    const index = sorted.findIndex(
+      (item) => item.numPerm === selectedStudent.numPerm
+    );
     return { rank: index === -1 ? 0 : index + 1, total };
   };
 
-  const rankings: Rankings = useMemo(() => ({
-    firstP: rankFor('firstP'),
-    secondP: rankFor('secondP'),
-    exam1: rankFor('exam1'),
-    total1: rankFor('total1'),
-    thirdP: rankFor('thirdP'),
-    fourthP: rankFor('fourthP'),
-    exam2: rankFor('exam2'),
-    total2: rankFor('total2'),
-    overall: rankFor('overall')
-  }), [studentAggregates, selectedStudent]);
+  const rankings: Rankings = useMemo(
+    () => ({
+      firstP: rankFor("firstP"),
+      secondP: rankFor("secondP"),
+      exam1: rankFor("exam1"),
+      total1: rankFor("total1"),
+      thirdP: rankFor("thirdP"),
+      fourthP: rankFor("fourthP"),
+      exam2: rankFor("exam2"),
+      total2: rankFor("total2"),
+      overall: rankFor("overall"),
+    }),
+    [studentAggregates, selectedStudent]
+  );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
-      {/* Bouton d'impression (non affiché en impression grâce à print:hidden) */}
-      <div className="w-full max-w-6xl flex justify-end mb-4 print:hidden">
-        <button 
-          onClick={handlePrint} 
-          className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-600 transition-colors flex items-center gap-2"
-          aria-label="Imprimer le bulletin"
-        >
-          <FaPrint />
-          <span>Imprimer</span>
-        </button>
-      </div>
-      {/* Zone à imprimer */}
-      <div id="printable-area" className="transform scale-30 md:scale-100 origin-top">
-        <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
-          <BulletinHeader />
-          <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
-          <div className="overflow-x-auto">
-            <BulletinTable 
-              flattenedSubjects={flattenedSubjects}
-              handleSubjectUpdate={handleSubjectUpdate}
-              totals={totals}
-              maxTotals={maxTotals}
-              percentages={percentages}
-              initialGradesMapping={initialGradesMapping}
-              ranking={rankings}
+    <>
+      {/* Styles globaux pour l'impression */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-area,
+          #printable-area * {
+            visibility: visible;
+          }
+          #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            transform: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+          }
+        }
+      `}</style>
+
+      <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
+        {/* Bouton d'impression (caché en impression grâce à la classe no-print) */}
+        <div className="w-full max-w-6xl flex justify-end mb-4 no-print">
+          <button
+            onClick={handlePrint}
+            className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-600 transition-colors flex items-center gap-2"
+            aria-label="Imprimer le bulletin"
+          >
+            <FaPrint />
+            <span>Imprimer</span>
+          </button>
+        </div>
+        {/* Contenu à imprimer */}
+        <div id="printable-area" className="transform scale-30 md:scale-100 origin-top">
+          <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
+            <BulletinHeader />
+            <BulletinInfo
+              selectedStudent={selectedStudent}
+              schoolInfo={schoolInfo}
             />
+            <div className="overflow-x-auto">
+              <BulletinTable
+                flattenedSubjects={flattenedSubjects}
+                handleSubjectUpdate={handleSubjectUpdate}
+                totals={totals}
+                maxTotals={maxTotals}
+                percentages={percentages}
+                initialGradesMapping={initialGradesMapping}
+                ranking={rankings}
+              />
+            </div>
+            <BulletinFooter />
           </div>
-          <BulletinFooter />
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
