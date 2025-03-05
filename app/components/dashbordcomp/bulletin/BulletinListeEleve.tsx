@@ -71,11 +71,17 @@ export default function BulletinListeEleve() {
         const titulairesRef = collection(doc(firestore, "schools", schoolId), "titulaires");
         const q = query(titulairesRef, where("professeur", "==", teacherName));
         const snapshot = await getDocs(q);
-        if (snapshot.empty)
-          throw new Error("Aucun document titulaire trouvé pour ce professeur");
+        if (snapshot.empty) {
+          // Si aucun document titulaire n'est trouvé, ne lancez pas d'erreur.
+          // On peut simplement ne rien faire ou définir teacherClass sur null.
+          console.info("Aucun document titulaire trouvé pour ce professeur.");
+          return;
+        }
         const data = snapshot.docs[0].data();
-        if (!data.classe)
-          throw new Error("La classe n'est pas définie dans le document titulaire");
+        if (!data.classe) {
+          console.info("La classe n'est pas définie dans le document titulaire.");
+          return;
+        }
         setTeacherClass(data.classe);
       } catch (error: any) {
         console.error("Erreur lors de la récupération du titulaire :", error.message);
@@ -159,7 +165,7 @@ export default function BulletinListeEleve() {
         {/* En-tête avec barre de recherche */}
         <div className="bg-blue-600 p-4 flex flex-col md:flex-row items-center justify-between">
           <h2 className="text-3xl text-white font-bold mb-2 md:mb-0">
-            Liste des élèves de la classe {teacherClass}
+            Liste des élèves de la classe {teacherClass || "non définie"}
           </h2>
           <input
             type="text"
