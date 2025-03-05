@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import Footer from '@/app/components/footer/Footer';
 
@@ -90,8 +91,13 @@ const AboutPage = () => {
       {/* Appel à l'action */}
       <section className="py-20 px-6 md:px-12 text-center bg-gradient-to-r from-teal-500 to-blue-600 text-white">
         <h3 className="text-3xl font-semibold">Rejoignez Masomo RDC</h3>
-        <p className="mt-4 text-xl max-w-2xl mx-auto opacity-90">Commencez à sécuriser vos documents scolaires dès aujourd'hui et faites partie de la solution !</p>
-        <button  className="mt-8 bg-teal-700 hover:bg-teal-600 text-white py-3 px-8 rounded-lg text-xl transition duration-300 transform hover:scale-105">
+        <p className="mt-4 text-xl max-w-2xl mx-auto opacity-90">
+          Commencez à sécuriser vos documents scolaires dès aujourd'hui et faites partie de la solution !
+        </p>
+        <button 
+          onClick={() => window.location.href = "/pages/inscription"} 
+          className="mt-8 bg-teal-700 hover:bg-teal-600 text-white py-3 px-8 rounded-lg text-xl transition duration-300 transform hover:scale-105"
+        >
           Inscrire mon école
         </button>
       </section>
