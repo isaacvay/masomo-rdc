@@ -43,7 +43,7 @@ export interface BulletinTableProps {
  * Pour les colonnes individuelles, on se base sur la présence d'une valeur (même 0 peut être considérée comme renseignée si ce n'est pas null).
  */
 const hasAnyForColumn = (gradesMatrix: (number | null)[][], col: number): boolean =>
-  gradesMatrix.some(row => row[col] !== null);
+  gradesMatrix.every(row => row[col] !== null);
 
 /**
  * Vérifie qu'au moins une note existe dans l'une des colonnes spécifiées.
