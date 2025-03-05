@@ -62,16 +62,55 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
   const [showBulletin, setShowBulletin] = useState(false);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
   const [showPrintView, setShowPrintView] = useState(false);
+  const [isComptable, setIsComptable] = useState(false);
 
+  // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      try {
+        const userDocRef = doc(firestore, "users", uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (userData.role === "professeur" && userData.secondRole === "comptable") {
+            setIsComptable(true);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification du rôle utilisateur :", error);
+      }
+    };
+    checkUserRole();
+  }, []);
+
+  // Récupérer les informations de l'école en utilisant le schoolId effectif
   useEffect(() => {
     const fetchSchoolInfo = async () => {
-      const schoolId = auth.currentUser?.uid;
-      if (!schoolId) {
+      let effectiveSchoolId = auth.currentUser?.uid;
+      if (!effectiveSchoolId) {
         console.error("Aucune école connectée");
         return;
       }
       try {
-        const schoolDocRef = doc(firestore, "schools", schoolId);
+        // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
+        const userDocRef = doc(firestore, "users", effectiveSchoolId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (
+            userData.role === "professeur" &&
+            userData.secondRole === "comptable" &&
+            userData.schoolId
+          ) {
+            effectiveSchoolId = userData.schoolId;
+          }
+        }
+        if (!effectiveSchoolId) {
+          throw new Error("Invalid school ID");
+        }
+        const schoolDocRef = doc(firestore, "schools", effectiveSchoolId);
         const schoolSnap = await getDoc(schoolDocRef);
         if (schoolSnap.exists()) {
           setSchoolInfo(schoolSnap.data() as SchoolInfo);
@@ -87,17 +126,32 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
     fetchSchoolInfo();
   }, []);
 
+  // Récupérer les élèves de la classe sélectionnée en utilisant le schoolId effectif
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const schoolId = auth.currentUser?.uid;
-        if (!schoolId) throw new Error("Aucune école connectée");
+        let effectiveSchoolId = auth.currentUser?.uid;
+        if (!effectiveSchoolId) throw new Error("Aucune école connectée");
+
+        // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
+        const userDocRef = doc(firestore, "users", effectiveSchoolId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (
+            userData.role === "professeur" &&
+            userData.secondRole === "comptable" &&
+            userData.schoolId
+          ) {
+            effectiveSchoolId = userData.schoolId;
+          }
+        }
 
         const usersRef = collection(firestore, "users");
         const q = query(
           usersRef,
           where("role", "==", "élève"),
-          where("schoolId", "==", schoolId),
+          where("schoolId", "==", effectiveSchoolId),
           where("classe", "==", selectedClass)
         );
         const snapshot = await getDocs(q);
@@ -289,8 +343,8 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
                   {filteredStudents.map((student) => (
                     <li
                       key={student.id}
-                      onClick={() => setSelectedStudent(student)}
-                      className="group p-4 hover:bg-indigo-50/50 cursor-pointer transition-colors duration-200"
+                      onClick={!isComptable ? () => setSelectedStudent(student) : undefined}
+                      className={`group p-4 transition-colors duration-200 ${!isComptable ? "hover:bg-indigo-50/50 cursor-pointer" : ""}`}
                     >
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -324,11 +378,14 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
                             </div>
                             <span className="text-sm font-medium text-gray-600">
                               {checkedStates[student.id]
-                                ? "Pas encore payé"
-                                : "Paiement effectué"}
+                                ?  "Pas encore payé"
+                                : "Paiement effectué" }
                             </span>
                           </label>
-                          <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-indigo-600 ml-4 transition-colors" />
+                          {/* Masquer l'icône de redirection pour le comptable */}
+                          {!isComptable && (
+                            <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-indigo-600 ml-4 transition-colors" />
+                          )}
                         </div>
                       </div>
                     </li>
