@@ -34,19 +34,18 @@ export interface BulletinTableProps {
   };
   initialGradesMapping?: Record<string, (number | null)[]>;
   ranking?: Rankings;
-  // Chaque ligne correspond à un SubjectRow (tableau de 6 notes)
+  // Chaque ligne représente un SubjectRow (tableau de 6 notes)
   gradesMatrix: (number | null)[][];
-};
+}
 
 /**
- * Vérifie qu'au moins une note existe dans la colonne spécifiée.
- * Pour les colonnes individuelles, on se base sur la présence d'une valeur (même 0 peut être considérée comme renseignée si ce n'est pas null).
+ * Vérifie qu'une note non nulle existe dans la colonne spécifiée.
  */
 const hasAnyForColumn = (gradesMatrix: (number | null)[][], col: number): boolean =>
-  gradesMatrix.every(row => row[col] !== null);
+  gradesMatrix.some(row => row[col] !== null);
 
 /**
- * Vérifie qu'au moins une note existe dans l'une des colonnes spécifiées.
+ * Vérifie qu'une note non nulle existe dans au moins une des colonnes spécifiées.
  */
 const hasAnyForColumns = (gradesMatrix: (number | null)[][], cols: number[]): boolean =>
   gradesMatrix.some(row => cols.some(col => row[col] !== null));
@@ -96,25 +95,18 @@ const BulletinTable: React.FC<BulletinTableProps> = ({
   } = percentages;
 
   /* 
-   * Pour afficher le total du 1er semestre et ses agrégats, il faut que 
-   * pour TOUTES les lignes, les colonnes 0, 1 et 2 soient renseignées.
+   * Ici, nous voulons reproduire la logique de SubjectRow : le total d'un semestre
+   * s'affiche uniquement si toutes les notes de ce groupe sont renseignées.
+   * Pour le tableau global, nous considérons que cela doit être vrai pour TOUTES les lignes.
    */
   const completeFirstSem =
     gradesMatrix.length > 0 &&
     gradesMatrix.every(row => row[0] !== null && row[1] !== null && row[2] !== null);
-
-  /* 
-   * De même, pour le 2ème semestre, il faut que les colonnes 3, 4 et 5 soient renseignées.
-   */
   const completeSecondSem =
     gradesMatrix.length > 0 &&
     gradesMatrix.every(row => row[3] !== null && row[4] !== null && row[5] !== null);
-
-  /* 
-   * Le total général (et ses agrégats) ne s'affiche que si les totaux 
-   * des deux semestres sont renseignés.
-   */
-  const completeGeneral = completeFirstSem && completeSecondSem;
+  const completeGeneral =
+    gradesMatrix.length > 0 && gradesMatrix.every(row => row.every(g => g !== null));
 
   // Fonction utilitaire pour afficher des cellules vides
   const renderEmptyCells = (count: number, additionalClasses = '') =>
@@ -169,7 +161,7 @@ const BulletinTable: React.FC<BulletinTableProps> = ({
               key={idx}
               subject={subject}
               onUpdate={(grades) => handleSubjectUpdate(idx, grades)}
-              initialGrades={initialGrades}
+              initialGrades={initialGrades?.filter((grade): grade is number => grade !== null)}
             />
           );
         })}
@@ -180,7 +172,7 @@ const BulletinTable: React.FC<BulletinTableProps> = ({
           <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300"></td>
           <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300">{sumMax1erP}</td>
           <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300">{sumMax2emeP}</td>
-          <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
+          <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300"></td>
           <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300">{sumMaxExam1}</td>
           <td className="border px-2 py-1 text-center bg-gray-200 border-gray-300">{sumMaxTotal1}</td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
@@ -210,12 +202,12 @@ const BulletinTable: React.FC<BulletinTableProps> = ({
           <td className="border px-2 py-1 text-center">
             {hasAnyForColumn(gradesMatrix, 2) ? sumExam1 : ""}
           </td>
-          {/* Total 1er Semestre uniquement si toutes les 3 notes sont renseignées */}
+          {/* Total 1er Semestre : uniquement si TOUTES les lignes ont les 3 notes renseignées */}
           <td className="border px-2 py-1 text-center">
             {completeFirstSem ? sumTotal1 : ""}
           </td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
-          {/* Pour le 2ème semestre */}
+          {/* Pour le second semestre */}
           <td className="border px-2 py-1 text-center">
             {hasAnyForColumn(gradesMatrix, 3) ? sum3emeP : ""}
           </td>
