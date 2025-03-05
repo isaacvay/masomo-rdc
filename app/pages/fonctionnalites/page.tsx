@@ -79,7 +79,7 @@ export default function FeaturesPage() {
           <ShieldCheckIcon className="h-20 w-20 mx-auto text-blue-600 mb-8" />
           <h2 className="text-3xl font-bold mb-6">Sécurité Renforcée</h2>
           <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-            Notre système combine chiffrement AES-256 et blockchain pour garantir 
+            Notre système combine chiffrement AES-256 pour garantir 
             l'intégrité des données scolaires et prévenir toute tentative de fraude.
           </p>
         </div>
