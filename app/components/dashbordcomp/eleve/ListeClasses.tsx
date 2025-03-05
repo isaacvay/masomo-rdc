@@ -3,13 +3,14 @@ import React, { useState, useEffect } from "react";
 import { sections, Section } from "@/data/cours"; // Vos données et interfaces
 import { colors } from "@/data/colors";
 import { auth, firestore } from "@/config/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 
 // Interface pour les élèves
 interface Student {
   eleve: string;
   classe: string;
-  schoolId: string; // Assurez-vous que ce champ existe dans vos documents utilisateurs
+  schoolId: string;
+  role: string;
 }
 
 interface ListeClassesProps {
@@ -21,10 +22,7 @@ const groupByCategory = (sections: Section[]) => {
   const grouped: { [key: string]: { category: string; classes: string[] } } = {};
   sections.forEach((section) => {
     if (!grouped[section.category]) {
-      grouped[section.category] = {
-        category: section.category,
-        classes: [],
-      };
+      grouped[section.category] = { category: section.category, classes: [] };
     }
     section.classe.forEach((classe) => {
       if (!grouped[section.category].classes.includes(classe)) {
@@ -40,17 +38,38 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Récupérer les élèves depuis Firestore en filtrant par école
+  // Récupérer les élèves depuis Firestore en filtrant par schoolId
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const schoolId = auth.currentUser?.uid;
-        if (!schoolId) {
+        let schoolId = "";
+        if (!auth.currentUser) {
           throw new Error("Aucune école connectée");
         }
+        // Par défaut, utiliser l'UID de l'utilisateur connecté
+        schoolId = auth.currentUser.uid;
+
+        // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
+        const userDocRef = doc(firestore, "users", auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (
+            userData.role === "professeur" &&
+            userData.secondRole === "comptable" &&
+            userData.schoolId
+          ) {
+            schoolId = userData.schoolId;
+          }
+        }
+
         const usersRef = collection(firestore, "users");
-        // Filtrer uniquement les élèves de l'école connectée
-        const q = query(usersRef, where("schoolId", "==", schoolId));
+        // Filtrer uniquement les élèves de l'école déterminée
+        const q = query(
+          usersRef,
+          where("schoolId", "==", schoolId),
+          where("role", "==", "élève")
+        );
         const snapshot = await getDocs(q);
         const data: Student[] = snapshot.docs.map((doc) => doc.data() as Student);
         console.log("Données élèves :", data);
@@ -68,12 +87,12 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
   // Regrouper les sections par catégorie
   const groupedSections = groupByCategory(sections);
 
-  // Fonction pour calculer le nombre d'élèves dans une classe donnée
+  // Calculer le nombre d'élèves pour une classe donnée
   const countStudentsInClass = (className: string) => {
     return students.filter((student) => student.classe === className).length;
   };
 
-  // Filtrer les sections pour ne conserver que les classes avec au moins un élève
+  // Ne conserver que les classes qui ont au moins un élève
   const filteredSections = groupedSections
     .map((section) => ({
       ...section,
