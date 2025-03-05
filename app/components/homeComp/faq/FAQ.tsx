@@ -19,8 +19,8 @@ function FAQ() {
     {
       question: "Est-ce que MASOMO RDC est gratuit ?",
       answer:
-        "MASOMO RDC propose un essai gratuit de 30 jours. Après cette période, un abonnement est requis pour accéder à toutes les fonctionnalités.",
-    },
+      "MASOMO RDC n'est pas gratuit. Un abonnement est requis pour accéder à toutes les fonctionnalités." 
+     },
     {
       question: "Comment fonctionne la sécurité des bulletins ?",
       answer:
@@ -34,10 +34,10 @@ function FAQ() {
     {
       question: "Quels sont les modes de paiement acceptés ?",
       answer:
-        "Nous acceptons les cartes de crédit, PayPal et les virements bancaires. Tous les paiements sont sécurisés et conformes aux normes internationales.",
+        "Nous acceptons les cartes de crédit, M-Pesa et les virements bancaires. Tous les paiements sont sécurisés et conformes aux normes internationales.",
     },
     {
-      question: "Comment contacter le support technique ?",
+      question: "Comment contacter le support technique ?", 
       answer:
         "Vous pouvez nous contacter via la page 'Contact' ou envoyer un e-mail à support@masomo.com. Notre équipe est disponible pour répondre à vos questions.",
     },
