@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { sections } from "@/data/cours";
-import { colors } from "@/data/colors";
 import { auth, firestore } from "@/config/firebase";
 import {
   collection,
@@ -40,6 +39,9 @@ export default function Cours({ selectedClass }: CoursProps) {
   const [currentTutor, setCurrentTutor] = useState<string>("");
   const [professeurs, setProfesseurs] = useState<(ProfesseurData & { id: string })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // États pour la recherche et le dropdown du titulaire
+  const [tutorSearchTerm, setTutorSearchTerm] = useState<string>("");
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
   // Récupérer les matières en fonction de la classe sélectionnée
   const currentSubjects = selectedClass
@@ -58,7 +60,6 @@ export default function Cours({ selectedClass }: CoursProps) {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const userData = userDoc.data() as { schoolId?: string };
-          // Utiliser le schoolId si présent, sinon utiliser l'UID de l'utilisateur
           setSchoolId(userData.schoolId ? userData.schoolId : currentUser.uid);
         } else {
           setSchoolId(currentUser.uid);
@@ -90,11 +91,10 @@ export default function Cours({ selectedClass }: CoursProps) {
         })) as (ProfesseurData & { id: string })[];
 
         // Générer des options de sélection numériques
-        const teachers: TeacherOption[] = professeursData.map((prof, index) => ({
+        const teachers = professeursData.map((prof, index) => ({
           id: index + 1,
           name: prof.displayName,
         }));
-        setTeacherOptions(teachers);
         setProfesseurs(professeursData);
 
         // Récupérer les titulaires depuis la sous-collection "titulaires" dans "schools/{schoolId}"
@@ -105,8 +105,26 @@ export default function Cours({ selectedClass }: CoursProps) {
         const tutorData = titulairesData.find((t: any) => t.classe === selectedClass);
         const tutorName = tutorData?.professeur || "";
         setCurrentTutor(tutorName);
-        const tutorOption = teachers.find((t) => t.name === tutorName);
-        setSelectedTutor(tutorOption ? tutorOption.id : (teachers[0]?.id ?? 0));
+
+        // Filtrer : exclure les professeurs déjà titulaires dans d'autres classes
+        const assignedTeacherNames = titulairesData
+          .filter((t: any) => t.classe !== selectedClass)
+          .map((t: any) => t.professeur);
+        const availableTeachers = teachers.filter(
+          (teacher) => teacher.name === tutorName || !assignedTeacherNames.includes(teacher.name)
+        );
+
+        setTeacherOptions(availableTeachers);
+
+        // Par défaut, préremplir le champ de recherche avec le nom du titulaire s'il existe
+        if (tutorName) {
+          setTutorSearchTerm(tutorName);
+          const tutorOption = availableTeachers.find((t) => t.name === tutorName);
+          setSelectedTutor(tutorOption ? tutorOption.id : (availableTeachers[0]?.id ?? 0));
+        } else {
+          setTutorSearchTerm("");
+          setSelectedTutor(availableTeachers[0]?.id ?? 0);
+        }
       } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
       } finally {
@@ -117,9 +135,22 @@ export default function Cours({ selectedClass }: CoursProps) {
     fetchData();
   }, [selectedClass, schoolId]);
 
-  // Gestion du changement du titulaire (dropdown)
-  const handleTutorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedTutor(Number(e.target.value));
+  // Filtrer les options du titulaire selon le terme de recherche
+  const filteredTeacherOptions = teacherOptions.filter((teacher) =>
+    teacher.name.toLowerCase().includes(tutorSearchTerm.toLowerCase())
+  );
+
+  // Gestion du changement dans le champ de recherche
+  const handleTutorSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTutorSearchTerm(e.target.value);
+    setDropdownOpen(true);
+  };
+
+  // Gestion de la sélection d'un professeur dans la liste déroulante
+  const handleSelectTutor = (teacher: TeacherOption) => {
+    setTutorSearchTerm(teacher.name);
+    setSelectedTutor(teacher.id);
+    setDropdownOpen(false);
   };
 
   // Gestion du changement d'un professeur pour une matière donnée
@@ -223,25 +254,44 @@ export default function Cours({ selectedClass }: CoursProps) {
             </svg>
             <h2 className="text-xl font-semibold text-gray-800">Titulaire de la classe</h2>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <select
-              id="tutor"
-              value={selectedTutor}
-              onChange={handleTutorChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300"
-            >
-              {teacherOptions.map((tutor) => (
-                <option key={tutor.id} value={tutor.id}>
-                  {tutor.name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={setTitulaire}
-              className="w-full sm:w-72 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-200"
-            >
-              Définir comme Titulaire
-            </button>
+          <div className="mb-4 relative">
+            <label htmlFor="tutorSearch" className="block text-gray-700 font-semibold mb-1">
+              Rechercher un professeur :
+            </label>
+            <div className="flex">
+              <input
+                type="text"
+                id="tutorSearch"
+                value={tutorSearchTerm}
+                onChange={handleTutorSearchChange}
+                onFocus={() => setDropdownOpen(true)}
+                placeholder="Rechercher un professeur..."
+                className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md"
+              />
+              <button
+                onClick={setTitulaire}
+                className="bg-blue-500 w-52 text-white px-4 py-2 rounded-r-md hover:bg-blue-600 transition duration-200"
+              >
+                Définir
+              </button>
+            </div>
+            {dropdownOpen && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-60 overflow-auto">
+                {filteredTeacherOptions.length > 0 ? (
+                  filteredTeacherOptions.map((teacher) => (
+                    <li
+                      key={teacher.id}
+                      onClick={() => handleSelectTutor(teacher)}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {teacher.name}
+                    </li>
+                  ))
+                ) : (
+                  <li className="px-3 py-2 text-gray-500">Aucun professeur trouvé</li>
+                )}
+              </ul>
+            )}
           </div>
           {currentTutor && (
             <p className="mt-2 text-gray-600">
