@@ -1,20 +1,19 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
-import { FaPrint } from "react-icons/fa";
-import BulletinHeader from "./BulletinHeader";
-import BulletinInfo from "./BulletinInfo";
-import BulletinTable from "./BulletinTable";
-import BulletinFooter from "./BulletinFooter";
-import { sections, Subject } from "@/data/cours";
+import React, { useState, useMemo, useEffect } from 'react';
+import BulletinHeader from './BulletinHeader';
+import BulletinInfo from './BulletinInfo';
+import BulletinTable from './BulletinTable';
+import BulletinFooter from './BulletinFooter';
+import { sections, Subject } from '@/data/cours';
 import {
   calculateTotals,
   calculateMaxTotals,
   calculatePercentage,
   Totals,
   MaxTotals,
-} from "@/utils/operations";
-import { firestore } from "@/config/firebase";
-import { collection, getDocs, doc } from "firebase/firestore";
+} from '@/utils/operations';
+import { firestore } from '@/config/firebase';
+import { collection, getDocs, doc } from 'firebase/firestore';
 
 export interface BulletinAfficheProps {
   selectedStudent: {
@@ -40,7 +39,7 @@ interface GradeEntry {
   studentId?: string;
   studentName: string;
   numPerm: string;
-  grades: string[];
+  grades: string[]; // Les notes sont sauvegardées sous forme de chaînes
   course: string;
   class: string;
   timestamp: string;
@@ -73,46 +72,30 @@ interface Rankings {
   overall: { rank: number; total: number };
 }
 
-const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
-  selectedStudent,
-  schoolInfo,
-}) => {
+const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo }) => {
   // Filtrer les sections selon la classe de l'élève
   const filteredSections = useMemo(
-    () =>
-      sections.filter((section) =>
-        section.classe.includes(selectedStudent.classe)
-      ),
+    () => sections.filter((section) => section.classe.includes(selectedStudent.classe)),
     [selectedStudent.classe]
   );
 
-  // Calculer le nombre total de matières (toutes sections confondues)
+  // Calculer le nombre total de matières
   const totalSubjects = useMemo(
-    () =>
-      filteredSections.reduce(
-        (count, section) => count + section.subjects.length,
-        0
-      ),
+    () => filteredSections.reduce((count, section) => count + section.subjects.length, 0),
     [filteredSections]
   );
 
-  // État pour stocker les notes (6 valeurs par matière)
-  const [allGrades, setAllGrades] = useState<number[][]>(
-    Array(totalSubjects)
-      .fill(null)
-      .map(() => Array(6).fill(0))
+  // Stocker les notes sous forme de (number | null)[][] pour conserver l'information sur la complétude
+  const [allGrades, setAllGrades] = useState<(number | null)[][]>(
+    Array(totalSubjects).fill(null).map(() => Array(6).fill(null))
   );
 
   // Réinitialiser les notes si le nombre de matières change
   useEffect(() => {
-    setAllGrades(
-      Array(totalSubjects)
-        .fill(null)
-        .map(() => Array(6).fill(0))
-    );
+    setAllGrades(Array(totalSubjects).fill(null).map(() => Array(6).fill(null)));
   }, [totalSubjects]);
 
-  const handleSubjectUpdate = (index: number, grades: number[]) => {
+  const handleSubjectUpdate = (index: number, grades: (number | null)[]) => {
     setAllGrades((prevGrades) => {
       const updatedGrades = [...prevGrades];
       updatedGrades[index] = grades;
@@ -120,20 +103,12 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
     });
   };
 
-  // Utiliser window.print() avec les styles globaux pour l'impression
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Calcul des totaux et pourcentages
+  // Calcul des totaux et pourcentages (en remplaçant null par 0 pour le calcul)
   const totals: Totals = useMemo(
-    () => calculateTotals(allGrades),
+    () => calculateTotals(allGrades.map(row => row.map(val => val ?? 0))),
     [allGrades]
   );
-  const maxTotals: MaxTotals = useMemo(
-    () => calculateMaxTotals(filteredSections),
-    [filteredSections]
-  );
+  const maxTotals: MaxTotals = useMemo(() => calculateMaxTotals(filteredSections), [filteredSections]);
   const percentages = {
     percent1erP: calculatePercentage(totals.sum1erP, maxTotals.sumMax1erP),
     percent2emeP: calculatePercentage(totals.sum2emeP, maxTotals.sumMax2emeP),
@@ -143,42 +118,26 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
     percent4emeP: calculatePercentage(totals.sum4emeP, maxTotals.sumMax4emeP),
     percentExam2: calculatePercentage(totals.sumExam2, maxTotals.sumMaxExam2),
     percentTotal2: calculatePercentage(totals.sumTotal2, maxTotals.sumMaxTotal2),
-    percentGeneral: calculatePercentage(
-      totals.sumGeneral,
-      maxTotals.totalMaxGeneralDisplayed
-    ),
+    percentGeneral: calculatePercentage(totals.sumGeneral, maxTotals.totalMaxGeneralDisplayed),
   };
 
-  // Aplatir la liste des matières pour le rendu
   const flattenedSubjects = useMemo(() => {
-    return filteredSections.reduce(
-      (acc, section) => acc.concat(section.subjects),
-      [] as Subject[]
-    );
+    return filteredSections.reduce((acc, section) => acc.concat(section.subjects), [] as Subject[]);
   }, [filteredSections]);
 
-  // Récupérer les entrées de notes depuis Firestore pour TOUS les élèves de la classe
+  // Récupérer les entrées de notes depuis Firestore
   const [gradeEntries, setGradeEntries] = useState<GradeEntry[]>([]);
   useEffect(() => {
     async function fetchGrades() {
       if (!selectedStudent.schoolId) {
-        console.log(
-          "schoolId non défini dans selectedStudent, attente..."
-        );
+        console.log("schoolId non défini dans selectedStudent, attente...");
         return;
       }
       try {
-        const gradesCollectionRef = collection(
-          doc(firestore, "schools", selectedStudent.schoolId),
-          "grades"
-        );
+        const gradesCollectionRef = collection(doc(firestore, "schools", selectedStudent.schoolId), "grades");
         const querySnapshot = await getDocs(gradesCollectionRef);
-        const data: GradeEntry[] = querySnapshot.docs.map((doc) =>
-          doc.data() as GradeEntry
-        );
-        const classEntries = data.filter(
-          (entry) => entry.class === selectedStudent.classe
-        );
+        const data: GradeEntry[] = querySnapshot.docs.map((doc) => doc.data() as GradeEntry);
+        const classEntries = data.filter((entry) => entry.class === selectedStudent.classe);
         setGradeEntries(classEntries);
       } catch (error) {
         console.error("Erreur lors de la récupération des notes :", error);
@@ -187,51 +146,38 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
     fetchGrades();
   }, [selectedStudent]);
 
-  // Construire un mapping des notes pour l'élève sélectionné
-  const initialGradesMapping: Record<string, number[]> = useMemo(() => {
-    const mapping: Record<string, number[]> = {};
+  // Mapping des notes pour l'élève sélectionné
+  const initialGradesMapping: Record<string, (number | null)[]> = useMemo(() => {
+    const mapping: Record<string, (number | null)[]> = {};
     gradeEntries
       .filter((entry) => entry.numPerm === selectedStudent.numPerm)
       .forEach((entry) => {
         const parsedGrades = entry.grades.map((g) => {
           const n = parseFloat(g);
-          return isNaN(n) ? 0 : n;
+          return isNaN(n) ? null : n;
         });
         mapping[entry.course] = parsedGrades;
       });
     return mapping;
   }, [gradeEntries, selectedStudent]);
 
-  // Calcul des agrégats pour chaque élève de la classe (pour le classement)
+  // Calcul des agrégats pour le classement
   const studentAggregates: StudentAggregate[] = useMemo(() => {
-    const aggregatesMap = new Map<
-      string,
-      {
-        firstP: number;
-        secondP: number;
-        exam1: number;
-        total1: number;
-        thirdP: number;
-        fourthP: number;
-        exam2: number;
-        total2: number;
-        overall: number;
-      }
-    >();
+    const aggregatesMap = new Map<string, {
+      firstP: number;
+      secondP: number;
+      exam1: number;
+      total1: number;
+      thirdP: number;
+      fourthP: number;
+      exam2: number;
+      total2: number;
+      overall: number;
+    }>();
     gradeEntries.forEach((entry) => {
       let agg = aggregatesMap.get(entry.numPerm);
       if (!agg) {
-        agg = {
-          firstP: 0,
-          secondP: 0,
-          exam1: 0,
-          total1: 0,
-          thirdP: 0,
-          fourthP: 0,
-          exam2: 0,
-          total2: 0,
-          overall: 0,
-        };
+        agg = { firstP: 0, secondP: 0, exam1: 0, total1: 0, thirdP: 0, fourthP: 0, exam2: 0, total2: 0, overall: 0 };
         aggregatesMap.set(entry.numPerm, agg);
       }
       const g = entry.grades.map((g) => {
@@ -255,101 +201,47 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({
     return results;
   }, [gradeEntries]);
 
-  // Fonction de classement pour une catégorie donnée
-  const rankFor = (category: keyof StudentAggregate["aggregates"]) => {
-    const sorted = studentAggregates
-      .slice()
-      .sort((a, b) => b.aggregates[category] - a.aggregates[category]);
+  const rankFor = (category: keyof StudentAggregate['aggregates']) => {
+    const sorted = studentAggregates.slice().sort((a, b) => b.aggregates[category] - a.aggregates[category]);
     const total = sorted.length;
-    const index = sorted.findIndex(
-      (item) => item.numPerm === selectedStudent.numPerm
-    );
+    const index = sorted.findIndex((item) => item.numPerm === selectedStudent.numPerm);
     return { rank: index === -1 ? 0 : index + 1, total };
   };
 
-  const rankings: Rankings = useMemo(
-    () => ({
-      firstP: rankFor("firstP"),
-      secondP: rankFor("secondP"),
-      exam1: rankFor("exam1"),
-      total1: rankFor("total1"),
-      thirdP: rankFor("thirdP"),
-      fourthP: rankFor("fourthP"),
-      exam2: rankFor("exam2"),
-      total2: rankFor("total2"),
-      overall: rankFor("overall"),
-    }),
-    [studentAggregates, selectedStudent]
-  );
+  const rankings: Rankings = useMemo(() => ({
+    firstP: rankFor('firstP'),
+    secondP: rankFor('secondP'),
+    exam1: rankFor('exam1'),
+    total1: rankFor('total1'),
+    thirdP: rankFor('thirdP'),
+    fourthP: rankFor('fourthP'),
+    exam2: rankFor('exam2'),
+    total2: rankFor('total2'),
+    overall: rankFor('overall')
+  }), [studentAggregates, selectedStudent]);
 
   return (
-    <>
-      {/* Styles globaux pour l'impression */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-area,
-          #printable-area * {
-            visibility: visible;
-          }
-          #printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            transform: none !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 10mm;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-          }
-        }
-      `}</style>
-
-      <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
-        {/* Bouton d'impression (caché en impression grâce à la classe no-print) */}
-        <div className="w-full max-w-6xl flex justify-end mb-4 no-print">
-          <button
-            onClick={handlePrint}
-            className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-600 transition-colors flex items-center gap-2"
-            aria-label="Imprimer le bulletin"
-          >
-            <FaPrint />
-            <span>Imprimer</span>
-          </button>
-        </div>
-        {/* Contenu à imprimer */}
-        <div id="printable-area" className="transform scale-30 md:scale-100 origin-top">
-          <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
-            <BulletinHeader />
-            <BulletinInfo
-              selectedStudent={selectedStudent}
-              schoolInfo={schoolInfo}
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
+      <div className="transform scale-40 md:scale-100 origin-top">
+        <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
+          <BulletinHeader />
+          <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
+          <div className="overflow-x-auto">
+            <BulletinTable 
+              flattenedSubjects={flattenedSubjects}
+              handleSubjectUpdate={handleSubjectUpdate}
+              totals={totals}
+              maxTotals={maxTotals}
+              percentages={percentages}
+              initialGradesMapping={initialGradesMapping}
+              ranking={rankings}
+              gradesMatrix={allGrades}
             />
-            <div className="overflow-x-auto">
-              <BulletinTable
-                flattenedSubjects={flattenedSubjects}
-                handleSubjectUpdate={handleSubjectUpdate}
-                totals={totals}
-                maxTotals={maxTotals}
-                percentages={percentages}
-                initialGradesMapping={initialGradesMapping}
-                ranking={rankings}
-              />
-            </div>
-            <BulletinFooter />
           </div>
+          <BulletinFooter />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
