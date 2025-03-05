@@ -1,12 +1,21 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Footer from '@/app/components/footer/Footer';
 
 const AboutPage = () => {
-  
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsConnected(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="font-sans bg-gradient-to-r mt-20 from-blue-600 to-teal-500 text-white">
-
       {/* En-tête */}
       <header className="py-20 px-6 md:px-12 text-center">
         <h1 className="text-5xl font-extrabold tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-teal-100">
@@ -95,10 +104,15 @@ const AboutPage = () => {
           Commencez à sécuriser vos documents scolaires dès aujourd'hui et faites partie de la solution !
         </p>
         <button 
-          onClick={() => window.location.href = "/pages/inscription"} 
+          onClick={() => {
+            if (!isConnected) {
+              window.location.href = "/pages/inscription";
+            }
+          }}
           className="mt-8 bg-teal-700 hover:bg-teal-600 text-white py-3 px-8 rounded-lg text-xl transition duration-300 transform hover:scale-105"
+          disabled={isConnected}
         >
-          Inscrire mon école
+          {isConnected ? "Vous êtes déjà connecté" : "Inscrire mon école"}
         </button>
       </section>
 
