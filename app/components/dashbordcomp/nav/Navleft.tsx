@@ -24,6 +24,7 @@ interface NavleftProps {
 interface AppUser {
   name: string;
   role: string;
+  secondRole?: string | null;
 }
 
 interface NavItemData {
@@ -39,7 +40,7 @@ const mainNavItems: NavItemData[] = [
 ];
 
 const teacherNavItems: NavItemData[] = [
-    { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
+  { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
   { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des élèves", page: "listeclasses" },
 ];
@@ -50,10 +51,15 @@ const studentNavItems: NavItemData[] = [
 ];
 
 const schoolNavItems: NavItemData[] = [
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Ajouter un Prof", page: "EnregistrementProfesseur" },
   { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscription élève", page: "EnregistrementEleve" },
-    { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Classes et Cours", page: "ClassesEtCours" },
+  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Ajouter un Prof", page: "EnregistrementProfesseur" },
+  { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Classes et Cours", page: "ClassesEtCours" },
   { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des profs", page: "listeprof" },
+  { icon: <ChartBarIcon className="h-6 w-6" />, label: "Élèves par classe", page: "elevesparclasse" },
+];
+
+const comptableNavItems: NavItemData[] = [
+  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscription élève", page: "EnregistrementEleve" },
   { icon: <ChartBarIcon className="h-6 w-6" />, label: "Élèves par classe", page: "elevesparclasse" },
 ];
 
@@ -99,29 +105,27 @@ export default function Navleft({ onPageChange }: NavleftProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Récupérer les données de l'utilisateur depuis la collection "users"
         const docRef = doc(db, "users", firebaseUser.uid);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const name = data.displayName || firebaseUser.email || "Utilisateur";
-          const role = data.role || "Utilisateur";
-          setUser({ name, role });
+          setUser({
+            name: data.displayName || firebaseUser.email || "Utilisateur",
+            role: data.role || "Utilisateur",
+            secondRole: data.secondRole || null,
+          });
         } else {
-          // En déduisant le rôle par le domaine de l'e-mail
           let name = firebaseUser.displayName || firebaseUser.email || "Utilisateur";
           let role = "Utilisateur";
           if (firebaseUser.email) {
             const email = firebaseUser.email.toLowerCase().trim();
-            if (email.endsWith("@prof.masomordc.cd")) {
-              role = "professeur";
-            } else if (email.endsWith("@elev.masomordc.cd")) {
-              role = "élève";
-            } else if (email.endsWith("@ecole.masomordc.cd")) {
-              role = "ecole";
-            }
+            role = email.endsWith("@ecole.masomordc.cd") ? "ecole" 
+                  : email.endsWith("@prof.masomordc.cd") ? "professeur"
+                  : email.endsWith("@elev.masomordc.cd") ? "élève"
+                  : "Utilisateur";
           }
-          setUser({ name, role });
+          setUser({ name, role, secondRole: null });
         }
       } else {
         setUser(null);
@@ -131,42 +135,47 @@ export default function Navleft({ onPageChange }: NavleftProps) {
     return () => unsubscribe();
   }, [db]);
 
-  if (loading) {
-    return <div>Chargement...</div>;
-  }
-
-  const displayName = user?.name || "Utilisateur";
-  const displayRole = user?.role || "Rôle inconnu";
+  if (loading) return <div>Chargement...</div>;
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/");
   };
 
-  const navSections: { title: string; items: NavItemData[] }[] = [
+  const navSections = [
     { title: "Navigation", items: mainNavItems },
   ];
+  if (user?.role === "professeur" && user.secondRole === "comptable") {
+    navSections.push({ title: "Comptabilité", items: comptableNavItems });
+  }
 
   if (user?.role === "professeur") {
     navSections.push({ title: "Pédagogie", items: teacherNavItems });
-  } else if (user?.role === "élève") {
+  }
+  
+  if (user?.role === "élève") {
     navSections.push({ title: "Bulletin", items: studentNavItems });
-  } else if (user?.role === "ecole") {
+  }
+  
+  if (user?.role === "ecole") {
     navSections.push({ title: "Scolarité", items: schoolNavItems });
   }
 
+  
+
   return (
     <aside className="w-64 transform scale-90 md:scale-100 p-6 mt-5 ml-4 mr-4 bg-white/10 backdrop-blur-md shadow-xl border-r border-white/20">
-      {/* Profil */}
       <div className="flex items-center space-x-4 p-2 bg-white/20 rounded-xl mb-10">
         <UserCircleIcon className="h-12 w-12 text-cyan-400" />
         <div>
-          <p className="text-sm font-semibold text-white uppercase">{displayName}</p>
-          <p className="text-sm text-gray-300">{displayRole}</p>
+          <p className="text-sm font-semibold text-white uppercase">{user?.name}</p>
+          <p className="text-sm text-gray-300">{user?.role}</p>
+          {user?.secondRole && (
+            <p className="text-xs text-gray-400">{user.secondRole}</p>
+          )}
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="space-y-8">
         {navSections.map((section) => (
           <div key={section.title}>
@@ -187,7 +196,6 @@ export default function Navleft({ onPageChange }: NavleftProps) {
           </div>
         ))}
 
-        {/* Déconnexion */}
         <div className="pt-4 border-t border-white/20">
           <ul className="space-y-2">
             <NavItem
