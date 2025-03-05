@@ -4,8 +4,8 @@ import { Subject } from "@/data/cours";
 
 export interface SubjectRowProps {
   subject: Subject;
-  initialGrades?: (number | null)[];
-  onUpdate?: (grades: (number | null)[]) => void;
+  initialGrades?: number[];
+  onUpdate?: (grades: number[]) => void;
 }
 
 // Fonction helper pour comparer deux tableaux de nombres
@@ -98,8 +98,8 @@ const SubjectRow: React.FC<SubjectRowProps> = ({ subject, initialGrades, onUpdat
       <td className={`border px-2 py-1 text-center font-semibold ${getDisplayClass(2)}`}>
         {grades[2] !== null ? grades[2] : ""}
       </td>
-      <td className={`border px-2 py-1 text-center font-bold ${grades.slice(0,3).every(g => g !== null) ? (firstSemTotal < firstSemMax / 2 ? "text-red-600" : "") : ""}`}>
-        {grades.slice(0,3).every(g => g !== null) ? firstSemTotal : ""}
+      <td className={`border px-2 py-1 text-center font-bold ${firstSemTotal < firstSemMax / 2 ? "text-red-600" : ""}`}>
+        {firstSemTotal !== 0 ? firstSemTotal : ""}
       </td>
       
       {/* Second semestre */}
@@ -118,12 +118,12 @@ const SubjectRow: React.FC<SubjectRowProps> = ({ subject, initialGrades, onUpdat
       <td className={`border px-2 py-1 text-center font-semibold ${getDisplayClass(5)}`}>
         {grades[5] !== null ? grades[5] : ""}
       </td>
-      <td className={`border px-2 py-1 text-center font-bold ${grades.slice(3,6).every(g => g !== null) ? (secondSemTotal < secondSemMax / 2 ? "text-red-600" : "") : ""}`}>
-        {grades.slice(3,6).every(g => g !== null) ? secondSemTotal : ""}
+      <td className={`border px-2 py-1 text-center font-bold ${secondSemTotal < secondSemMax / 2 ? "text-red-600" : ""}`}>
+        {secondSemTotal !== 0 ? secondSemTotal : ""}
       </td>
       
-      <td className={`border px-2 py-1 text-center font-bold ${grades.every(g => g !== null) ? (generalTotal < overallMax / 2 ? "text-red-600" : "") : ""}`}>
-        {grades.every(g => g !== null) ? generalTotal : ""}
+      <td className={`border px-2 py-1 text-center font-bold ${generalTotal < overallMax / 2 ? "text-red-600" : ""}`}>
+        {generalTotal !== 0 ? generalTotal : ""}
       </td>
       
       <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
