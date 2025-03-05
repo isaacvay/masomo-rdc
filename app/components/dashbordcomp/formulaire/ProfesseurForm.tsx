@@ -19,7 +19,6 @@ import {
   XCircle,
 } from "lucide-react";
 
-// Fonction utilitaire pour générer un mot de passe aléatoire
 const generateRandomPassword = (length = 8): string => {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -32,6 +31,7 @@ export default function AddProfesseur() {
   const router = useRouter();
   const [professeur, setProfesseur] = useState<string>("");
   const [sexe, setSexe] = useState<string>("");
+  const [secondRole, setSecondRole] = useState<string>("");
   const [courses, setCourses] = useState<string[]>([]);
   const [courseSearchTerm, setCourseSearchTerm] = useState<string>("");
   const [currentCourse, setCurrentCourse] = useState<string>("");
@@ -40,7 +40,6 @@ export default function AddProfesseur() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
-  // Utiliser useMemo pour calculer la liste des options une seule fois
   const courseOptions: string[] = useMemo(() => {
     return Array.from(new Set(
       sections.flatMap(section => section.subjects.map(subject => subject.name))
@@ -61,12 +60,10 @@ export default function AddProfesseur() {
       return;
     }
     try {
-      // Génération du mot de passe et de l'email du professeur
       const password = generateRandomPassword();
       setGeneratedPassword(password);
       const email = `${professeur.toLowerCase().replace(/\s+/g, "")}@prof.masomordc.cd`;
 
-      // Création du compte avec l'instance secondaire
       const userCredential = await createUserWithEmailAndPassword(
         secondaryAuth,
         email,
@@ -74,38 +71,34 @@ export default function AddProfesseur() {
       );
       const user = userCredential.user;
 
-      // Mise à jour du profil du professeur avec son nom
       await updateProfile(user, { displayName: professeur });
 
-      // Récupérer l'UID de l'école (compte connecté)
       const schoolId = auth.currentUser.uid;
 
-      // Préparation des données du professeur pour le document "users"
       const profData = {
         uid: user.uid,
         role: "professeur",
+        secondRole: secondRole || null,
         displayName: professeur,
         email,
         sexe,
-        courses, // Liste des cours assignés
-        schoolId, // Lien avec l'école
-        password, // Ajout du mot de passe
+        courses,
+        schoolId,
+        password,
         createdAt: new Date(),
       };
 
-      // Enregistrement dans la collection "users"
       await setDoc(doc(firestore, "users", user.uid), profData);
 
-      // Déconnexion de l'instance secondaire pour ne pas affecter la session école
       await signOut(secondaryAuth);
 
       alert(`Professeur ajouté avec succès !
 Email : ${email}
 Mot de passe : ${password}`);
 
-      // Réinitialisation des champs
       setProfesseur("");
       setSexe("");
+      setSecondRole("");
       setCourses([]);
       setCurrentCourse("");
       setCourseSearchTerm("");
@@ -133,7 +126,6 @@ Mot de passe : ${password}`);
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Champ pour le nom */}
         <div className="mb-4">
           <label htmlFor="professeur" className="block text-gray-700 font-semibold mb-1">
             Nom du professeur :
@@ -149,7 +141,6 @@ Mot de passe : ${password}`);
           />
         </div>
 
-        {/* Champ pour le sexe */}
         <div className="mb-4">
           <label htmlFor="sexe" className="block text-gray-700 font-semibold mb-1">
             Sexe :
@@ -167,7 +158,22 @@ Mot de passe : ${password}`);
           </select>
         </div>
 
-        {/* Sélection des cours */}
+        {/* Champ du deuxième rôle */}
+        <div className="mb-4">
+          <label htmlFor="secondRole" className="block text-gray-700 font-semibold mb-1">
+            Deuxième rôle (facultatif) :
+          </label>
+          <select
+            id="secondRole"
+            value={secondRole}
+            onChange={(e) => setSecondRole(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="">-- Aucun --</option>
+            <option value="comptable">Comptable</option>
+          </select>
+        </div>
+
         <div className="mb-4 relative">
           <label htmlFor="courseSearch" className="block text-gray-700 font-semibold mb-1">
             Sélectionner un cours :
