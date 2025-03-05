@@ -8,10 +8,10 @@ import {
   signOut,
   fetchSignInMethodsForEmail,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { sections } from "@/data/cours";
 
-// Fonction utilitaire pour générer un mot de passe aléatoire
+// Fonction utilitaire pour générer un mot de passe ou code aléatoire
 const generateRandomPassword = (length = 8): string => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   return Array.from({ length }, () =>
@@ -45,8 +45,9 @@ export default function AddEleve() {
       return;
     }
     try {
-      // Génération du mot de passe
+      // Génération du mot de passe et du code bulletin
       const password = generateRandomPassword();
+      const bulletin = generateRandomPassword(10);
 
       // Génération de l'email de base sans suffixe
       const baseEmail = `${name.toLowerCase().replace(/\s+/g, "")}@elev.masomordc.cd`;
@@ -60,6 +61,26 @@ export default function AddEleve() {
         email = `${name.toLowerCase().replace(/\s+/g, "")}.${randomSuffix}@elev.masomordc.cd`;
       }
 
+      // Vérification du type de compte connecté pour définir le schoolId
+      let schoolId = auth.currentUser.uid; // par défaut, pour un compte école
+      try {
+        const userDocRef = doc(firestore, "users", auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (
+            userData.role === "professeur" &&
+            userData.secondRole === "comptable" &&
+            userData.schoolId
+          ) {
+            // Utiliser le schoolId enregistré sur le compte professeur
+            schoolId = userData.schoolId;
+          }
+        }
+      } catch (fetchError) {
+        console.error("Erreur lors de la récupération des données de l'utilisateur :", fetchError);
+      }
+
       // Création du compte élève avec l'instance secondaire
       const userCredential = await createUserWithEmailAndPassword(
         secondaryAuth,
@@ -70,9 +91,6 @@ export default function AddEleve() {
 
       // Mise à jour du profil (affichage du nom de l'élève)
       await updateProfile(user, { displayName: name });
-
-      // Récupérer l'UID de l'école (compte connecté)
-      const schoolId = auth.currentUser.uid;
 
       // Préparation des données de l'élève pour le document "users"
       const eleveData = {
@@ -87,7 +105,8 @@ export default function AddEleve() {
         numPerm,
         email,
         password, // Ajout du mot de passe
-        schoolId, // Ajout du schoolId
+        bulletin, // Ajout du code unique pour le bulletin
+        schoolId, // Utilisation du schoolId défini ci-dessus
         createdAt: new Date(),
       };
 
