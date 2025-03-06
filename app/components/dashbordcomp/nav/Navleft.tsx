@@ -189,7 +189,7 @@ export default function Navleft({ onPageChange }: NavleftProps) {
     navSections.push({ title: "Bulletin", items: studentNavItems });
   }
 
-  if (user?.role === "ecole") {
+  if (user?.role === "école") {
     navSections.push({ title: "Scolarité", items: schoolNavItems });
   }
 
