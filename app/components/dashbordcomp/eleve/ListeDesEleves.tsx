@@ -258,24 +258,37 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     setSelectedStudent(null);
     setShowBulletin(false);
   }
+
+ 
+  
  
 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8">
-       <button
-                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                onClick={handonRetour }
-                aria-label="Retour à la page précédente"
-              >
-                <FaArrowLeft className="shrink-0" />
-                <span>Retour</span>
-              </button>
-      
+     {!selectedStudent && !showBulletin && onRetour && (
+          <button
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              onClick={onRetour}
+              aria-label="Retour à la page précédente"
+           >
+          <FaArrowLeft className="shrink-0" />
+          <span>Retour</span>
+          </button>
+          )}
       {selectedStudent ? (
         <div className="container mx-auto px-4">
           {showBulletin ? (
             <div>
+              <button
+             className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              onClick={handonRetour}
+               aria-label="Retour à la page précédente"
+               >
+                <FaArrowLeft className="shrink-0" />
+                  <span>Retour</span>
+          </button>
+
 
               <BulletinAffiche
                 selectedStudent={selectedStudent}
