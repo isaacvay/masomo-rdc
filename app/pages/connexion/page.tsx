@@ -47,7 +47,7 @@ export default function Connexion() {
       }
       const data = docSnap.data() as { role?: string };
       const userRole = data.role || "";
-      if (userRole === "ecole") {
+      if (["ecole", "école"].includes(userRole)) {
         router.push("/dashboardPrin");
       } else if (["prof", "professeur"].includes(userRole)) {
         router.push("/dashboardProf");
