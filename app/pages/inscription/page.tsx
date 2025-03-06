@@ -87,7 +87,7 @@ export default function EcoleSignup() {
       // Préparation des données pour le document utilisateur dans "users"
       const userData = {
         uid: user.uid,
-        role: "ecole",
+        role: "école",
         displayName: formData.ecole,
         email: formData.email,
         password: formData.motDePasse, // Mot de passe stocké en clair (à sécuriser en production)
