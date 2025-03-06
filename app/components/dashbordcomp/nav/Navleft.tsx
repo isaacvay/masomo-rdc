@@ -126,7 +126,7 @@ export default function Navleft({ onPageChange }: NavleftProps) {
             if (firebaseUser.email) {
               const email = firebaseUser.email.toLowerCase().trim();
               role = email.endsWith("@ecole.masomordc.cd")
-                ? "ecole"
+                ? "école"
                 : email.endsWith("@prof.masomordc.cd")
                 ? "professeur"
                 : email.endsWith("@elev.masomordc.cd")
