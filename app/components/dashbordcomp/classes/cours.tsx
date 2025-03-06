@@ -11,6 +11,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { FaArrowLeft } from "react-icons/fa";
 
 interface ProfesseurData {
   displayName: string;
@@ -26,9 +27,10 @@ type TeacherOption = {
 
 interface CoursProps {
   selectedClass: string | null;
+  onRetour: () => void;
 }
 
-export default function Cours({ selectedClass }: CoursProps) {
+export default function Cours({ selectedClass, onRetour }: CoursProps) {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [selectedTutor, setSelectedTutor] = useState<number>(0);
   const [titulaireOptions, setTitulaireOptions] = useState<TeacherOption[]>([]);
@@ -234,7 +236,16 @@ export default function Cours({ selectedClass }: CoursProps) {
   }
 
   return (
+    <div>
     <div className="max-w-4xl mx-auto  mt-5 p-4 bg-white rounded-lg shadow-lg space-y-8">
+       <button
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                      onClick={onRetour }
+                      aria-label="Retour à la page précédente"
+                    >
+                      <FaArrowLeft className="shrink-0" />
+                      <span>Retour</span>
+                    </button>
       {/* Section Titulaire */}
       <div className="p-6 bg-indigo-50 rounded-lg">
         <h3 className="text-xl font-semibold mb-4 text-indigo-700">Titulaire de la classe de {selectedClass}</h3>
@@ -336,6 +347,7 @@ export default function Cours({ selectedClass }: CoursProps) {
           Annuler
         </button>
       </div>
+    </div>
     </div>
   );
 }
