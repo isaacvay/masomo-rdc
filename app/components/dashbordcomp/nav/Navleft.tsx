@@ -2,11 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/config/firebase";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import {
-  UserCircleIcon,
-  Cog6ToothIcon,
   HomeIcon,
+  Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   AcademicCapIcon,
   BookOpenIcon,
@@ -15,7 +14,7 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { Briefcase } from "lucide-react";
+import { Briefcase, UserCircleIcon } from "lucide-react";
 
 interface NavleftProps {
   onPageChange: (page: string) => void;
@@ -25,6 +24,7 @@ interface AppUser {
   name: string;
   role: string;
   secondRole?: string | null;
+  schoolId?: string;
 }
 
 interface NavItemData {
@@ -42,7 +42,6 @@ const mainNavItems: NavItemData[] = [
 const teacherNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
-  { icon: <UsersIcon className="h-6 w-6" />, label: "Bulletins", page: "listeclasses" },
 ];
 
 const studentNavItems: NavItemData[] = [
@@ -104,32 +103,40 @@ export default function Navleft({ onPageChange }: NavleftProps) {
   const router = useRouter();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isTitulaire, setIsTitulaire] = useState(false);
   const db = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const docRef = doc(db, "users", firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setUser({
-            name: data.displayName || firebaseUser.email || "Utilisateur",
-            role: data.role || "Utilisateur",
-            secondRole: data.secondRole || null,
-          });
-        } else {
-          let name = firebaseUser.displayName || firebaseUser.email || "Utilisateur";
-          let role = "Utilisateur";
-          if (firebaseUser.email) {
-            const email = firebaseUser.email.toLowerCase().trim();
-            role = email.endsWith("@ecole.masomordc.cd") ? "ecole" 
-                  : email.endsWith("@prof.masomordc.cd") ? "professeur"
-                  : email.endsWith("@elev.masomordc.cd") ? "élève"
-                  : "Utilisateur";
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUser({
+              name: data.displayName || firebaseUser.email || "Utilisateur",
+              role: data.role || "Utilisateur",
+              secondRole: data.secondRole || null,
+              schoolId: data.schoolId || null,
+            });
+          } else {
+            let name = firebaseUser.displayName || firebaseUser.email || "Utilisateur";
+            let role = "Utilisateur";
+            if (firebaseUser.email) {
+              const email = firebaseUser.email.toLowerCase().trim();
+              role = email.endsWith("@ecole.masomordc.cd")
+                ? "ecole"
+                : email.endsWith("@prof.masomordc.cd")
+                ? "professeur"
+                : email.endsWith("@elev.masomordc.cd")
+                ? "élève"
+                : "Utilisateur";
+            }
+            setUser({ name, role, secondRole: null });
           }
-          setUser({ name, role, secondRole: null });
+        } catch (error: any) {
+          console.error("Erreur lors de la récupération du document utilisateur :", error);
         }
       } else {
         setUser(null);
@@ -139,6 +146,23 @@ export default function Navleft({ onPageChange }: NavleftProps) {
     return () => unsubscribe();
   }, [db]);
 
+  // Vérifier si le professeur est titulaire en recherchant dans la collection "titulaires" de l'école
+  useEffect(() => {
+    const checkTitulaire = async () => {
+      if (user && user.role === "professeur" && user.schoolId) {
+        try {
+          const titulairesRef = collection(db, "schools", user.schoolId, "titulaires");
+          const q = query(titulairesRef, where("professeur", "==", user.name));
+          const snapshot = await getDocs(q);
+          setIsTitulaire(!snapshot.empty);
+        } catch (error: any) {
+          console.error("Erreur lors de la vérification du statut de titulaire :", error);
+        }
+      }
+    };
+    checkTitulaire();
+  }, [user, db]);
+
   if (loading) return <div>Chargement...</div>;
 
   const handleLogout = async () => {
@@ -146,26 +170,28 @@ export default function Navleft({ onPageChange }: NavleftProps) {
     router.push("/");
   };
 
-  const navSections = [
-    { title: "Navigation", items: mainNavItems },
-  ];
+  // Définition des sections de navigation selon le rôle
+  const navSections = [{ title: "Navigation", items: mainNavItems }];
+
   if (user?.role === "professeur" && user.secondRole === "comptable") {
     navSections.push({ title: "Comptabilité", items: comptableNavItems });
   }
 
   if (user?.role === "professeur") {
     navSections.push({ title: "Pédagogie", items: teacherNavItems });
+    // Ajout de la section "Titulaire" si le professeur est identifié comme tel
+    if (isTitulaire) {
+      navSections.push({ title: "Titulaire", items: titulaireNavItems });
+    }
   }
-  
+
   if (user?.role === "élève") {
     navSections.push({ title: "Bulletin", items: studentNavItems });
   }
-  
+
   if (user?.role === "ecole") {
     navSections.push({ title: "Scolarité", items: schoolNavItems });
   }
-
-  
 
   return (
     <aside className="w-64 transform scale-90 md:scale-100 p-6 mt-5 ml-4 mr-4 bg-white/10 backdrop-blur-md shadow-xl border-r border-white/20">
@@ -174,9 +200,7 @@ export default function Navleft({ onPageChange }: NavleftProps) {
         <div>
           <p className="text-sm font-semibold text-white uppercase">{user?.name}</p>
           <p className="text-sm text-gray-300">{user?.role}</p>
-          {user?.secondRole && (
-            <p className="text-xs text-gray-400">{user.secondRole}</p>
-          )}
+          {user?.secondRole && <p className="text-xs text-gray-400">{user.secondRole}</p>}
         </div>
       </div>
 
