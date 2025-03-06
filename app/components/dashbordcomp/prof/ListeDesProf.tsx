@@ -63,9 +63,9 @@ export default function ListeDesProfs() {
       ) : (
         <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-lg">
           {/* Header */}
-          <div className="p-6 border-b border-slate-100">
+          <div className="p-6 border-b border-slate-100 bg-blue-600 rounded-lg">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
                   Liste des professeurs
               </h2>
               <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
@@ -81,7 +81,7 @@ export default function ListeDesProfs() {
                 </div>
                 <button
                   onClick={() => setShowListeProfMP(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-full transition w-full md:w-auto"
+                  className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-5 py-3 rounded-full transition w-full md:w-auto"
                 >
                   <HiPrinter className="text-xl" />
                   <span>Imprimer la liste</span>
