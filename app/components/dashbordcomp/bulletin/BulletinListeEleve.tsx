@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import BulletinAffiche from "./BulletinAffiche";
 import { auth, firestore } from "@/config/firebase";
 import { collection, doc, getDocs, getDoc, query, where } from "firebase/firestore";
+import { ChevronRightIcon } from "lucide-react";
 
 interface Student {
   displayName: string;
@@ -160,32 +161,62 @@ export default function BulletinListeEleve() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
         {/* En-tête avec barre de recherche */}
-        <div className="bg-blue-600 p-4 flex flex-col md:flex-row items-center justify-between">
-          <h2 className="text-3xl text-white font-bold mb-2 md:mb-0">
-            Liste des élèves de la classe {teacherClass || "non définie"}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 md:p-8 rounded-t-3xl">
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <h2 className="text-xl md:text-2xl text-slate-200 font-medium">
+            <p className="text-2xl md:text-3xl text-white font-bold">
+            Bulletins des élèves
+            </p>
+             classe: {teacherClass || "non définie"}
           </h2>
+          <div className="relative w-full md:w-1/3"></div>
           <input
-            type="text"
-            placeholder="Rechercher un élève..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-1/3 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+                type="text"
+                placeholder="Rechercher un élève..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-96 p-4 pl-5 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+               <svg
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              </div>
+              </div>
         </div>
 
         {/* Liste des élèves */}
-        <div className="p-4">
+        <div className="p-4 ">
           <ul className="divide-y divide-gray-200">
             {filteredStudents.map((student) => (
               <li
                 key={student.numPerm}
-                className="p-4 cursor-pointer hover:bg-gray-100"
-                onClick={() => setSelectedStudent(student)}
+                className="p-6 bg-white rounded-2xl mb-1 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                
               >
-                <p className="text-xl font-medium uppercase">{student.displayName}</p>
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex-1">
+                <p className="text-xl font-semibold">{student.displayName}</p>
+                </div>
+                <div  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                 onClick={() => setSelectedStudent(student)}>
+                  Afficher le bulletin  <ChevronRightIcon className="w-6 h-6" />
+                </div>
+                </div>
+                
               </li>
             ))}
             {filteredStudents.length === 0 && (
@@ -194,6 +225,6 @@ export default function BulletinListeEleve() {
           </ul>
         </div>
       </div>
-    </div>
+    
   );
 }
