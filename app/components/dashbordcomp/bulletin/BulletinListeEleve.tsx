@@ -179,7 +179,7 @@ export default function BulletinListeEleve() {
                 placeholder="Rechercher un élève..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-3 md:p-4 pl-18 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full p-3 md:pl-10 md:p-4 pl-20 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <svg
                 className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-4 md:h-5 w-4 md:w-5 text-gray-400"
