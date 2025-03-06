@@ -207,7 +207,7 @@ export default function BulletinListeEleve() {
               >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex-1">
-                    <p className="text-lg md:text-xl font-semibold">{student.displayName}</p>
+                    <p className="text-lg md:text-xl font-semibold uppercase">{student.displayName}</p>
                     <p className="text-gray-500">
                       {student.sexe === "M" ? "Garçon" : "Fille"}
                     </p>
