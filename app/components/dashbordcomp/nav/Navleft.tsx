@@ -42,12 +42,16 @@ const mainNavItems: NavItemData[] = [
 const teacherNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
-  { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des élèves", page: "listeclasses" },
+  { icon: <UsersIcon className="h-6 w-6" />, label: "Bulletins", page: "listeclasses" },
 ];
 
 const studentNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Bulletin", page: "bulletin" },
   { icon: <Briefcase className="h-6 w-6" />, label: "Cours", page: "cours" },
+];
+
+const titulaireNavItems: NavItemData[] = [
+  { icon: <UsersIcon className="h-6 w-6" />, label: "Bulletins", page: "listeclasses" },
 ];
 
 const schoolNavItems: NavItemData[] = [
