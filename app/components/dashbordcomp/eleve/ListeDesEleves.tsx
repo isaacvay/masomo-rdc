@@ -24,6 +24,8 @@ import {
   CheckCheck,
   GanttChartSquare,
 } from "lucide-react";
+import { FaArrowLeft } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
 interface Student {
   id: string;
@@ -50,9 +52,11 @@ interface SchoolInfo {
 
 interface ListeDesElevesProps {
   selectedClass?: string;
+
 }
 
-export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesElevesProps) {
+export default function ListeDesEleves({ selectedClass = "7eme"  }: ListeDesElevesProps) {
+  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -248,18 +252,28 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
     );
   }
 
+  function onRetour() {
+    setSelectedStudent(null);
+    setShowBulletin(false);
+    setShowPrintView(false);
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8">
+       <button
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                onClick={onRetour}
+                aria-label="Retour à la page précédente"
+              >
+                <FaArrowLeft className="shrink-0" />
+                <span>Retour</span>
+              </button>
+      
       {selectedStudent ? (
         <div className="container mx-auto px-4">
           {showBulletin ? (
             <div>
-              <button
-                onClick={() => setShowBulletin(false)}
-                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-              >
-                Retour au profil
-              </button>
+
               <BulletinAffiche
                 selectedStudent={selectedStudent}
                 schoolInfo={schoolInfo || dummySchoolInfo}
@@ -352,7 +366,7 @@ export default function ListeDesEleves({ selectedClass = "7eme" }: ListeDesEleve
                             <UserCircle className="h-8 w-8 text-indigo-600" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 truncate">
+                            <h3 className="text-lg font-semibold text-gray-900 truncate uppercase">
                               {student.displayName}
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
