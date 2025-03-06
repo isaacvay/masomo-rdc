@@ -22,7 +22,6 @@ interface SchoolInfo {
   commune: string;
   nom: string;
   code: string;
-  // Ajoutez d'autres champs si nécessaire
 }
 
 export default function BulletinListeEleve() {
@@ -33,125 +32,126 @@ export default function BulletinListeEleve() {
   const [teacherClass, setTeacherClass] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [school, setSchool] = useState<SchoolInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 1. Récupérer le schoolId et vérifier le rôle du professeur depuis "users"
   useEffect(() => {
     const fetchTeacherInfo = async () => {
       try {
         const user = auth.currentUser;
         if (!user) throw new Error("Aucun utilisateur connecté");
+
         const teacherDoc = await getDoc(doc(firestore, "users", user.uid));
         if (!teacherDoc.exists()) throw new Error("Utilisateur introuvable");
+
         const teacherData = teacherDoc.data();
         if (teacherData.role !== "professeur")
           throw new Error("Accès refusé : Vous n'êtes pas un professeur");
+
         setIsTeacher(true);
-        // Utilise le schoolId présent dans le document du professeur
-        if (teacherData.schoolId) {
-          setSchoolId(teacherData.schoolId);
-        } else {
-          throw new Error("Le document du professeur ne contient pas de schoolId");
-        }
+        setSchoolId(teacherData.schoolId || null);
       } catch (error: any) {
-        console.error("Erreur lors de la récupération du professeur :", error.message);
+        setError(error.message);
+        setIsTeacher(false);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchTeacherInfo();
   }, []);
 
-  // 2. Récupérer la classe du professeur via la sous-collection "titulaires" de "schools/{schoolId}"
   useEffect(() => {
     const fetchTeacherClass = async () => {
+      if (!schoolId) return;
+
       try {
-        if (!schoolId) return;
-        // On utilise le nom du professeur pour filtrer, puisque dans "titulaires"
-        // le champ "professeur" est enregistré avec le nom du professeur.
         const teacherName = auth.currentUser?.displayName;
         if (!teacherName) throw new Error("Nom du professeur non défini");
+
         const titulairesRef = collection(doc(firestore, "schools", schoolId), "titulaires");
         const q = query(titulairesRef, where("professeur", "==", teacherName));
         const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-          // Si aucun document titulaire n'est trouvé, ne lancez pas d'erreur.
-          // On peut simplement ne rien faire ou définir teacherClass sur null.
-          console.info("Aucun document titulaire trouvé pour ce professeur.");
-          return;
+
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setTeacherClass(data.classe || null);
         }
-        const data = snapshot.docs[0].data();
-        if (!data.classe) {
-          console.info("La classe n'est pas définie dans le document titulaire.");
-          return;
-        }
-        setTeacherClass(data.classe);
       } catch (error: any) {
-        console.error("Erreur lors de la récupération du titulaire :", error.message);
+        setError("Erreur lors de la récupération de la classe");
       }
     };
 
     fetchTeacherClass();
   }, [schoolId]);
 
-  // 3. Récupérer les élèves (dans "users") appartenant à la classe du professeur
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!teacherClass) return;
+
       try {
-        if (!teacherClass) return;
         const studentsQuery = query(
           collection(firestore, "users"),
           where("role", "==", "élève"),
-          where("classe", "==", teacherClass)
+          where("classe", "==", teacherClass),
+          where("schoolId", "==", schoolId) // Filtrage par école ajouté
         );
+
         const snapshot = await getDocs(studentsQuery);
-        const studentsData: Student[] = snapshot.docs.map((doc) => doc.data() as Student);
+        const studentsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            displayName: data.displayName,
+            sexe: data.sexe,
+            neEA: data.neEA,
+            naissance: data.naissance,
+            classe: data.classe,
+            section: data.section,
+            numPerm: data.numPerm,
+            schoolId: data.schoolId,
+            id: doc.id
+          } as Student;
+        });
         setStudents(studentsData);
       } catch (error: any) {
-        console.error("Erreur lors de la récupération des élèves :", error.message);
+        setError("Erreur lors de la récupération des élèves");
       }
     };
 
     fetchStudents();
   }, [teacherClass]);
 
-  // 4. Récupérer les informations de l'école depuis "schools" avec schoolId
   useEffect(() => {
     const fetchSchoolInfo = async () => {
+      if (!schoolId) return;
+
       try {
-        if (!schoolId) return;
         const schoolDoc = await getDoc(doc(firestore, "schools", schoolId));
-        if (!schoolDoc.exists()) throw new Error("École non trouvée");
-        const schoolData = schoolDoc.data() as SchoolInfo;
-        setSchool(schoolData);
+        if (schoolDoc.exists()) {
+          setSchool(schoolDoc.data() as SchoolInfo);
+        }
       } catch (error: any) {
-        console.error("Erreur lors de la récupération des informations de l'école :", error.message);
+        setError("Erreur lors de la récupération des informations de l'école");
       }
     };
 
     fetchSchoolInfo();
   }, [schoolId]);
 
-  if (!isTeacher) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-red-600">Accès refusé.</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-4">Chargement...</div>;
+  if (error) return <div className="p-4 text-red-600">{error}</div>;
+  if (!isTeacher) return <div className="p-4 text-red-600">Accès refusé</div>;
 
-  // Filtrage selon le terme de recherche
-  const filteredStudents = students.filter((student) =>
+  const filteredStudents = students.filter(student =>
     student.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (selectedStudent) {
-    if (!school) {
-      return <div>Chargement des informations de l'école...</div>;
-    }
+  if (selectedStudent && school) {
     return (
-      <div>
+      <div className="p-4">
         <button
           onClick={() => setSelectedStudent(null)}
-          className="m-4 p-2 bg-blue-600 text-white rounded"
+          className="mb-4 w-full md:w-auto p-2 bg-blue-600 text-white rounded"
         >
           Retour à la liste
         </button>
@@ -161,31 +161,31 @@ export default function BulletinListeEleve() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
-        {/* En-tête avec barre de recherche */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 md:p-8 rounded-t-3xl">
-        <div className="flex flex-col md:flex-row items-center justify-between">
-          <h2 className="text-xl md:text-2xl text-slate-200 font-medium">
-            <p className="text-2xl md:text-3xl text-white font-bold">
-            Bulletins des élèves
-            </p>
-             classe: {teacherClass || "non définie"}
-          </h2>
-          <div className="relative w-full md:w-1/3"></div>
-          <input
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 md:p-8 rounded-t-3xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold mb-2">
+                Bulletins des élèves
+              </h2>
+              <p className="text-slate-200">
+                Classe : {teacherClass || "Non définie"}
+              </p>
+            </div>
+            <div className="relative w-full md:w-96">
+              <input
                 type="text"
                 placeholder="Rechercher un élève..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-96 p-4 pl-5 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full p-3 md:p-4 pl-10 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-               <svg
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+              <svg
+                className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-4 md:h-5 w-4 md:w-5 text-gray-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   strokeLinecap="round"
@@ -194,29 +194,32 @@ export default function BulletinListeEleve() {
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
-              </div>
-              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Liste des élèves */}
-        <div className="p-4 ">
-          <ul className="divide-y divide-gray-200">
+        <div className="p-4">
+          <ul className="grid grid-cols-1 gap-4 md:gap-6">
             {filteredStudents.map((student) => (
               <li
                 key={student.numPerm}
-                className="p-6 bg-white rounded-2xl mb-1 shadow-lg hover:shadow-xl transition-shadow duration-300"
-                
+                className="p-4 bg-white rounded-2xl shadow hover:shadow-xl transition-shadow duration-300"
               >
-                <div className="flex items-center justify-between gap-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex-1">
-                <p className="text-xl font-semibold">{student.displayName}</p>
+                    <p className="text-lg md:text-xl font-semibold">{student.displayName}</p>
+                    <p className="text-gray-500">
+                      {student.sexe === "M" ? "Garçon" : "Fille"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedStudent(student)}
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    Afficher le bulletin
+                    <ChevronRightIcon className="w-5 h-5" />
+                  </button>
                 </div>
-                <div  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                 onClick={() => setSelectedStudent(student)}>
-                  Afficher le bulletin  <ChevronRightIcon className="w-6 h-6" />
-                </div>
-                </div>
-                
               </li>
             ))}
             {filteredStudents.length === 0 && (
@@ -225,6 +228,6 @@ export default function BulletinListeEleve() {
           </ul>
         </div>
       </div>
-    
+    </div>
   );
 }
