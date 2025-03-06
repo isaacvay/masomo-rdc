@@ -12,7 +12,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { getAuth, updatePassword } from 'firebase/auth';
 // Importer les composants refactorés
 import SectionHeader from './subcomponents/SectionHeader';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 type Theme = {
   name: string;
@@ -111,8 +111,10 @@ export default function Parametres() {
 
     try {
       if (user && formData.newPassword) {
-        // Seul le changement de mot de passe est autorisé
+        // Met à jour le mot de passe via Firebase Auth
         await updatePassword(user, formData.newPassword);
+        // Met à jour le document Firestore en écrasant l'ancien mot de passe
+        await updateDoc(doc(db, 'users', user.uid), { password: formData.newPassword });
       }
       
       // Simulation d'un délai
