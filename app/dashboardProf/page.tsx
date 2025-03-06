@@ -45,7 +45,7 @@ export default function DashboardFullScreen() {
       break;
     case "listeDesCours":
       content = selectedClass ? (
-        <Cours selectedClass={selectedClass} />
+        <Cours selectedClass={selectedClass} onRetour={() => setSelectedPage("ClassesEtCours")} />
       ) : (
         <div className="text-2xl font-semibold text-center p-4">
           Veuillez sélectionner une classe pour afficher les cours.
@@ -92,6 +92,7 @@ export default function DashboardFullScreen() {
           <NotesListeEleve
             selectedCourse={selectedCourse}
             selectedClass={selectedClassForCourse}
+            onRetour={() => setSelectedPage("SaisieDeNotes")}
           />
         ) : (
           <div className="text-2xl font-semibold text-center p-4">
@@ -111,7 +112,9 @@ export default function DashboardFullScreen() {
       break;
     case "bulletinNotesListeEleve":
       content = selectedClass ? (
-        <ListeDesEleves selectedClass={selectedClass} />
+        <ListeDesEleves selectedClass={selectedClass} 
+        onRetour={() => setSelectedPage("elevesparclasse")}
+        />
       ) : (
         <div className="text-2xl font-semibold text-center p-4">
           Veuillez sélectionner une classe.
