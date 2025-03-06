@@ -26,6 +26,7 @@ type FormData = {
   twoFactor: boolean;
   password: string;
   newPassword: string;
+  confirmPassword: string; // Champ de confirmation ajouté
 };
 
 type Section = {
@@ -49,6 +50,7 @@ export default function Parametres() {
     twoFactor: false,
     password: '',
     newPassword: '',
+    confirmPassword: '', // Initialisation du champ de confirmation
   });
 
   // Récupérer les données depuis la collection "users"
@@ -101,6 +103,12 @@ export default function Parametres() {
     e.preventDefault();
     setStatus({ loading: true, error: null, success: false });
     
+    // Vérifier que le nouveau mot de passe et sa confirmation correspondent
+    if (formData.newPassword !== formData.confirmPassword) {
+      setStatus({ loading: false, error: 'Les mots de passe ne correspondent pas', success: false });
+      return;
+    }
+
     try {
       if (user && formData.newPassword) {
         // Seul le changement de mot de passe est autorisé
@@ -111,7 +119,7 @@ export default function Parametres() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setStatus({ loading: false, error: null, success: true });
       // Réinitialiser les champs de mot de passe
-      setFormData(prev => ({ ...prev, password: '', newPassword: '' }));
+      setFormData(prev => ({ ...prev, password: '', newPassword: '', confirmPassword: '' }));
       setDirty(false);
     } catch (error) {
       console.error(error);
@@ -121,7 +129,7 @@ export default function Parametres() {
 
   const handleCancel = () => {
     // Réinitialiser uniquement les champs relatifs au mot de passe
-    setFormData(prev => ({ ...prev, password: '', newPassword: '' }));
+    setFormData(prev => ({ ...prev, password: '', newPassword: '', confirmPassword: '' }));
     setDirty(false);
   };
 
@@ -234,6 +242,16 @@ export default function Parametres() {
                           value={formData.newPassword}
                           onChange={(e) => {
                             setFormData({ ...formData, newPassword: e.target.value });
+                            setDirty(true);
+                          }}
+                        />
+                        <input
+                          type="password"
+                          placeholder="Confirmer le nouveau mot de passe"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          value={formData.confirmPassword}
+                          onChange={(e) => {
+                            setFormData({ ...formData, confirmPassword: e.target.value });
                             setDirty(true);
                           }}
                         />
