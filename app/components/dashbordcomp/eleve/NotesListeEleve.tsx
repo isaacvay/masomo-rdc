@@ -26,11 +26,13 @@ type ActionStatus = "idle" | "saving" | "saved" | "canceling" | "canceled";
 interface ListeEleveProps {
   selectedCourse: string;
   selectedClass?: string;
+  onRetour: () => void;
 }
 
 export default function ListeEleve({
   selectedCourse,
   selectedClass = "7ème",
+  onRetour,
 }: ListeEleveProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<{ [key: string]: string }>({});
