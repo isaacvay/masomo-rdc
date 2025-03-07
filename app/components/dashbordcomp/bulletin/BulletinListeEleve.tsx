@@ -108,7 +108,7 @@ export default function BulletinListeEleve() {
             naissance: data.naissance,
             classe: data.classe,
             section: data.section,
-            bulletinId: data.bulletinId,
+            bulletinId: data.bulletinId, // Ajout de la propriété bulletinId
             schoolId: data.schoolId,
             numPerm: data.numPerm,
             id: doc.id
