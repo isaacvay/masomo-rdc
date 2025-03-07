@@ -13,6 +13,7 @@ interface Student {
   classe: string;
   section: string;
   numPerm: string;
+  bulletinId: string;
   schoolId: string;
 }
 
@@ -107,8 +108,9 @@ export default function BulletinListeEleve() {
             naissance: data.naissance,
             classe: data.classe,
             section: data.section,
-            numPerm: data.numPerm,
+            bulletinId: data.bulletinId,
             schoolId: data.schoolId,
+            numPerm: data.numPerm,
             id: doc.id
           } as Student;
         });
