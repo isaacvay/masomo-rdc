@@ -1,366 +1,235 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
-import BulletinHeader from './BulletinHeader';
-import BulletinInfo from './BulletinInfo';
-import BulletinTable from './BulletinTable';
-import BulletinFooter from './BulletinFooter';
-import { sections, Subject } from '@/data/cours';
-import {
-  calculateTotals,
-  calculateMaxTotals,
-  Totals,
-  MaxTotals,
-} from '@/utils/operations';
-import { firestore } from '@/config/firebase';
-import {
-  collection,
-  getDocs,
-  doc,
-  addDoc,
-  updateDoc,
-  setDoc,
-  serverTimestamp,
-  getDoc
-} from 'firebase/firestore';
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/config/firebase";
+import React, { useState, useEffect } from "react";
+import BulletinAffiche from "./BulletinAffiche";
+import { auth, firestore } from "@/config/firebase";
+import { collection, doc, getDocs, getDoc, query, where } from "firebase/firestore";
+import { ChevronRightIcon } from "lucide-react";
 
-export interface BulletinAfficheProps {
-  selectedStudent: {
-    displayName: string;
-    sexe: string;
-    neEA: string;
-    naissance: string;
-    classe: string;
-    section: string;
-    numPerm: string;
-    bulletinId: string; // Si défini, on l'utilisera comme nom du document
-    schoolId: string;
-  };
-  schoolInfo: {
-    province: string;
-    ville: string;
-    commune: string;
-    nom: string;
-    code: string;
-  };
-  accountType?: 'school' | 'teacher' | string;
-}
-
-interface GradeEntry {
-  studentId?: string;
-  studentName: string;
+interface Student {
+  displayName: string;
+  sexe: string;
+  neEA: string;
+  naissance: string;
+  classe: string;
+  section: string;
   numPerm: string;
-  grades: string[];
-  course: string;
-  class: string;
-  timestamp: string;
+  bulletinId: string;
+  schoolId: string;
 }
 
-interface StudentAggregate {
-  numPerm: string;
-  aggregates: {
-    firstP: number;
-    secondP: number;
-    exam1: number;
-    total1: number;
-    thirdP: number;
-    fourthP: number;
-    exam2: number;
-    total2: number;
-    overall: number;
-  };
+interface SchoolInfo {
+  province: string;
+  ville: string;
+  commune: string;
+  nom: string;
+  code: string;
 }
 
-interface Rankings {
-  firstP: { rank: number; total: number };
-  secondP: { rank: number; total: number };
-  exam1: { rank: number; total: number };
-  total1: { rank: number; total: number };
-  thirdP: { rank: number; total: number };
-  fourthP: { rank: number; total: number };
-  exam2: { rank: number; total: number };
-  total2: { rank: number; total: number };
-  overall: { rank: number; total: number };
-}
+export default function BulletinListeEleve() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isTeacher, setIsTeacher] = useState(false);
+  const [teacherClass, setTeacherClass] = useState<string | null>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [school, setSchool] = useState<SchoolInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const safePercentage = (value: number, total: number): string => {
-  if (total === 0 || value === undefined || value === null || isNaN(value)) return "0";
-  const percentage = (value / total) * 100;
-  return percentage.toFixed(1);
-};
-
-const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo, accountType = '' }) => {
-  // Gestion du rôle connecté
-  const [userRole, setUserRole] = useState<string>('');
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDocRef = doc(firestore, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserRole((data.role || '').toLowerCase());
-        }
+    const fetchTeacherInfo = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Aucun utilisateur connecté");
+
+        const teacherDoc = await getDoc(doc(firestore, "users", user.uid));
+        if (!teacherDoc.exists()) throw new Error("Utilisateur introuvable");
+
+        const teacherData = teacherDoc.data();
+        if (teacherData.role !== "professeur")
+          throw new Error("Accès refusé : Vous n'êtes pas un professeur");
+
+        setIsTeacher(true);
+        setSchoolId(teacherData.schoolId || null);
+      } catch (error: any) {
+        setError(error.message);
+        setIsTeacher(false);
+      } finally {
+        setLoading(false);
       }
-    });
-    return () => unsubscribe();
+    };
+
+    fetchTeacherInfo();
   }, []);
 
-  console.log("Valeur accountType :", accountType);
-  const normalizedAccountType = accountType.toLowerCase();
-  const filteredSections = useMemo(
-    () => sections.filter((section) => section.classe.includes(selectedStudent.classe)),
-    [selectedStudent.classe]
-  );
-
-  const totalSubjects = useMemo(
-    () => filteredSections.reduce((count, section) => count + section.subjects.length, 0),
-    [filteredSections]
-  );
-
-  const [allGrades, setAllGrades] = useState<(number | null)[][]>(
-    Array(totalSubjects).fill(null).map(() => Array(6).fill(null))
-  );
-
   useEffect(() => {
-    setAllGrades(Array(totalSubjects).fill(null).map(() => Array(6).fill(null)));
-  }, [totalSubjects]);
+    const fetchTeacherClass = async () => {
+      if (!schoolId) return;
 
-  const handleSubjectUpdate = (index: number, grades: (number | null)[]) => {
-    setAllGrades((prevGrades) => {
-      const updatedGrades = [...prevGrades];
-      updatedGrades[index] = grades;
-      return updatedGrades;
-    });
-  };
-
-  const totals: Totals = useMemo(
-    () => calculateTotals(allGrades.map(row => row.map(val => val ?? 0))),
-    [allGrades]
-  );
-  const maxTotals: MaxTotals = useMemo(() => calculateMaxTotals(filteredSections), [filteredSections]);
-  const percentages = {
-    percent1erP: safePercentage(totals.sum1erP, maxTotals.sumMax1erP),
-    percent2emeP: safePercentage(totals.sum2emeP, maxTotals.sumMax2emeP),
-    percentExam1: safePercentage(totals.sumExam1, maxTotals.sumMaxExam1),
-    percentTotal1: safePercentage(totals.sumTotal1, maxTotals.sumMaxTotal1),
-    percent3emeP: safePercentage(totals.sum3emeP, maxTotals.sumMax3emeP),
-    percent4emeP: safePercentage(totals.sum4emeP, maxTotals.sumMax4emeP),
-    percentExam2: safePercentage(totals.sumExam2, maxTotals.sumMaxExam2),
-    percentTotal2: safePercentage(totals.sumTotal2, maxTotals.sumMaxTotal2),
-    percentGeneral: safePercentage(totals.sumGeneral, maxTotals.totalMaxGeneralDisplayed),
-  };
-
-  const flattenedSubjects = useMemo(() => {
-    return filteredSections.reduce((acc, section) => acc.concat(section.subjects), [] as Subject[]);
-  }, [filteredSections]);
-
-  const [gradeEntries, setGradeEntries] = useState<GradeEntry[]>([]);
-  const [bulletinId, setBulletinId] = useState<string | null>(null);
-  useEffect(() => {
-    async function fetchGrades() {
-      if (!selectedStudent.schoolId) {
-        console.log("schoolId non défini dans selectedStudent, attente...");
-        return;
-      }
       try {
-        const gradesCollectionRef = collection(doc(firestore, "schools", selectedStudent.schoolId), "grades");
-        const querySnapshot = await getDocs(gradesCollectionRef);
-        const data: GradeEntry[] = querySnapshot.docs.map((doc) => doc.data() as GradeEntry);
-        const classEntries = data.filter((entry) => entry.class === selectedStudent.classe);
-        setGradeEntries(classEntries);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des notes :", error);
-      }
-    }
-    fetchGrades();
-  }, [selectedStudent]);
+        const teacherName = auth.currentUser?.displayName;
+        if (!teacherName) throw new Error("Nom du professeur non défini");
 
-  const initialGradesMapping: Record<string, (number | null)[]> = useMemo(() => {
-    const mapping: Record<string, (number | null)[]> = {};
-    gradeEntries
-      .filter((entry) => entry.numPerm === selectedStudent.numPerm)
-      .forEach((entry) => {
-        const parsedGrades = entry.grades.map((g) => {
-          const n = parseFloat(g);
-          return isNaN(n) ? null : n;
+        const titulairesRef = collection(doc(firestore, "schools", schoolId), "titulaires");
+        const q = query(titulairesRef, where("professeur", "==", teacherName));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setTeacherClass(data.classe || null);
+        }
+      } catch (error: any) {
+        setError("Erreur lors de la récupération de la classe");
+      }
+    };
+
+    fetchTeacherClass();
+  }, [schoolId]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!teacherClass) return;
+
+      try {
+        const studentsQuery = query(
+          collection(firestore, "users"),
+          where("role", "==", "élève"),
+          where("classe", "==", teacherClass),
+          where("schoolId", "==", schoolId) // Filtrage par école ajouté
+        );
+
+        const snapshot = await getDocs(studentsQuery);
+        const studentsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            displayName: data.displayName,
+            sexe: data.sexe,
+            neEA: data.neEA,
+            naissance: data.naissance,
+            classe: data.classe,
+            section: data.section,
+            bulletinId: data.bulletinId,
+            schoolId: data.schoolId,
+            numPerm: data.numPerm,
+            id: doc.id
+          } as Student;
         });
-        mapping[entry.course] = parsedGrades;
-      });
-    return mapping;
-  }, [gradeEntries, selectedStudent]);
-
-  const studentAggregates: StudentAggregate[] = useMemo(() => {
-    const aggregatesMap = new Map<string, {
-      firstP: number;
-      secondP: number;
-      exam1: number;
-      total1: number;
-      thirdP: number;
-      fourthP: number;
-      exam2: number;
-      total2: number;
-      overall: number;
-    }>();
-    gradeEntries.forEach((entry) => {
-      let agg = aggregatesMap.get(entry.numPerm);
-      if (!agg) {
-        agg = { firstP: 0, secondP: 0, exam1: 0, total1: 0, thirdP: 0, fourthP: 0, exam2: 0, total2: 0, overall: 0 };
-        aggregatesMap.set(entry.numPerm, agg);
+        setStudents(studentsData);
+      } catch (error: any) {
+        setError("Erreur lors de la récupération des élèves");
       }
-      const g = entry.grades.map((g) => {
-        const n = parseFloat(g);
-        return isNaN(n) ? 0 : n;
-      });
-      agg.firstP += g[0] || 0;
-      agg.secondP += g[1] || 0;
-      agg.exam1 += g[2] || 0;
-      agg.total1 += (g[0] || 0) + (g[1] || 0) + (g[2] || 0);
-      agg.thirdP += g[3] || 0;
-      agg.fourthP += g[4] || 0;
-      agg.exam2 += g[5] || 0;
-      agg.total2 += (g[3] || 0) + (g[4] || 0) + (g[5] || 0);
-      agg.overall = agg.total1 + agg.total2;
-    });
-    const results: StudentAggregate[] = [];
-    aggregatesMap.forEach((value, key) => {
-      results.push({ numPerm: key, aggregates: value });
-    });
-    return results;
-  }, [gradeEntries]);
+    };
 
-  const rankFor = (category: keyof StudentAggregate['aggregates']) => {
-    const sorted = studentAggregates.slice().sort((a, b) => b.aggregates[category] - a.aggregates[category]);
-    const total = sorted.length;
-    const index = sorted.findIndex((item) => item.numPerm === selectedStudent.numPerm);
-    return { rank: index === -1 ? 0 : index + 1, total };
-  };
+    fetchStudents();
+  }, [teacherClass]);
 
-  const rankings: Rankings = useMemo(() => ({
-    firstP: rankFor('firstP'),
-    secondP: rankFor('secondP'),
-    exam1: rankFor('exam1'),
-    total1: rankFor('total1'),
-    thirdP: rankFor('thirdP'),
-    fourthP: rankFor('fourthP'),
-    exam2: rankFor('exam2'),
-    total2: rankFor('total2'),
-    overall: rankFor('overall')
-  }), [studentAggregates, selectedStudent]);
+  useEffect(() => {
+    const fetchSchoolInfo = async () => {
+      if (!schoolId) return;
 
-  const handleSaveBulletin = async () => {
-    try {
-      const bulletinCollectionRef = collection(firestore, "publicBulletins");
-      
-      // Conversion de la matrice 2D en objet indexé par le nom de la matière
-      const flattenedGrades = allGrades.reduce<Record<string, (number | null)[]>>((acc, row, index) => {
-        const subjectName = flattenedSubjects[index]?.name || `subject_${index}`;
-        acc[subjectName] = row.map(val => (val === null || val === undefined) ? null : Number(val));
-        return acc;
-      }, {});
-      
-      const gradesMetadata = {
-        rowCount: allGrades.length,
-        colCount: allGrades[0]?.length || 0
-      };
-      
-      const sanitizedTotals = Object.entries(totals).reduce((acc: Totals, [key, value]) => {
-        (acc as any)[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-        return acc;
-      }, {} as Totals);
-      
-      const sanitizedMaxTotals = Object.entries(maxTotals).reduce((acc, [key, value]) => {
-        acc[key as keyof MaxTotals] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-        return acc;
-      }, {} as MaxTotals);
-      
-      const sanitizedPercentages = Object.entries(percentages).reduce((acc, [key, value]) => {
-        acc[key] = value || "0";
-        return acc;
-      }, {} as Record<string, string>);
-      
-      const sanitizedStudent = {
-        displayName: selectedStudent.displayName || "",
-        sexe: selectedStudent.sexe || "",
-        neEA: selectedStudent.neEA || "",
-        naissance: selectedStudent.naissance || "",
-        classe: selectedStudent.classe || "",
-        section: selectedStudent.section || "",
-        numPerm: selectedStudent.numPerm || "",
-        schoolId: selectedStudent.schoolId || ""
-      };
-      
-      const sanitizedSchool = {
-        province: schoolInfo.province || "",
-        ville: schoolInfo.ville || "",
-        commune: schoolInfo.commune || "",
-        nom: schoolInfo.nom || "",
-        code: schoolInfo.code || ""
-      };
-      
-      const bulletinData = {
-        student: sanitizedStudent,
-        school: sanitizedSchool,
-        grades: flattenedGrades,
-        gradesMetadata: gradesMetadata,
-        totals: sanitizedTotals,
-        maxTotals: sanitizedMaxTotals,
-        percentages: sanitizedPercentages,
-        timestamp: serverTimestamp()
-      };
-
-      // Si bulletinId est défini dans selectedStudent, on l'utilise comme nom du document.
-      if(selectedStudent.bulletinId) {
-        const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
-        // setDoc permet de créer ou mettre à jour le document avec cet ID
-        await setDoc(bulletinDocRef, bulletinData, { merge: true });
-        console.log("Bulletin enregistré/mis à jour avec l'ID personnalisé :", selectedStudent.bulletinId);
-        alert("Bulletin enregistré/mis à jour avec succès !");
-      } else {
-        // Sinon, création d'un document avec un ID généré automatiquement
-        const docRef = await addDoc(bulletinCollectionRef, bulletinData);
-        setBulletinId(docRef.id);
-        console.log("Document sauvegardé avec ID généré :", docRef.id);
-        alert("Bulletin enregistré avec succès !");
+      try {
+        const schoolDoc = await getDoc(doc(firestore, "schools", schoolId));
+        if (schoolDoc.exists()) {
+          setSchool(schoolDoc.data() as SchoolInfo);
+        }
+      } catch (error: any) {
+        setError("Erreur lors de la récupération des informations de l'école");
       }
-    } catch (error) {
-      console.error("Erreur lors de l'enregistrement du bulletin :", error);
-      alert(`Erreur lors de l'enregistrement du bulletin: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
+    };
+
+    fetchSchoolInfo();
+  }, [schoolId]);
+
+  if (loading) return <div className="p-4">Chargement...</div>;
+  if (error) return <div className="p-4 text-red-600">{error}</div>;
+  if (!isTeacher) return <div className="p-4 text-red-600">Accès refusé</div>;
+
+  const filteredStudents = students.filter(student =>
+    student.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (selectedStudent && school) {
+    return (
+      <div className="p-4">
+        <button
+          onClick={() => setSelectedStudent(null)}
+          className="mb-4 w-full md:w-auto p-2 bg-blue-600 text-white rounded"
+        >
+          Retour à la liste
+        </button>
+        <BulletinAffiche selectedStudent={selectedStudent} schoolInfo={school} />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
-      <div className="transform scale-30 md:scale-100 origin-top">
-        <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
-          <BulletinHeader />
-          <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
-          <div className="overflow-x-auto">
-            <BulletinTable 
-              flattenedSubjects={flattenedSubjects}
-              handleSubjectUpdate={handleSubjectUpdate}
-              totals={totals}
-              maxTotals={maxTotals}
-              percentages={percentages}
-              initialGradesMapping={initialGradesMapping}
-              ranking={rankings}
-              gradesMatrix={allGrades}
-            />
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 md:p-8 rounded-t-3xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold mb-2">
+                Bulletins des élèves
+              </h2>
+              <p className="text-slate-200">
+                Classe : {teacherClass || "Non définie"}
+              </p>
+            </div>
+            <div className="relative w-full md:w-96">
+              <input
+                type="text"
+                placeholder="Rechercher un élève..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full p-3 md:pl-10 md:p-4 pl-20 bg-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <svg
+                className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-4 md:h-5 w-4 md:w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
           </div>
-          <BulletinFooter />
-          {(userRole === 'école' || userRole === 'professeur') && (
-            <button
-              onClick={handleSaveBulletin}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Sauvegarder le Bulletin
-            </button>
-          )}
+        </div>
+
+        <div className="p-4">
+          <ul className="grid grid-cols-1 gap-4 md:gap-6">
+            {filteredStudents.map((student) => (
+              <li
+                key={student.numPerm}
+                className="p-4 bg-white rounded-2xl shadow hover:shadow-xl transition-shadow duration-300"
+              >
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-lg md:text-xl font-semibold uppercase">{student.displayName}</p>
+                    <p className="text-gray-500">
+                      {student.sexe === "M" ? "Garçon" : "Fille"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedStudent(student)}
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    Afficher le bulletin
+                    <ChevronRightIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+            {filteredStudents.length === 0 && (
+              <li className="p-4 text-center text-gray-500">Aucun élève trouvé.</li>
+            )}
+          </ul>
         </div>
       </div>
     </div>
   );
-};
-
-export default BulletinAffiche;
+}
