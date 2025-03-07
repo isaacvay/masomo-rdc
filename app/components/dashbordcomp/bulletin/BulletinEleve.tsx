@@ -14,6 +14,7 @@ interface Student {
   classe: string;
   numPerm: string;
   email: string;
+  bulletinId: string;
   schoolId: string;
   paiement?: boolean; // Si true, le bulletin n'est pas disponible
 }
