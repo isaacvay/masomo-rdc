@@ -8,12 +8,22 @@ import { sections, Subject } from '@/data/cours';
 import {
   calculateTotals,
   calculateMaxTotals,
-  calculatePercentage,
   Totals,
   MaxTotals,
 } from '@/utils/operations';
 import { firestore } from '@/config/firebase';
-import { collection, getDocs, doc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  addDoc,
+  updateDoc,
+  setDoc,
+  serverTimestamp,
+  getDoc
+} from 'firebase/firestore';
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/config/firebase";
 
 export interface BulletinAfficheProps {
   selectedStudent: {
@@ -24,6 +34,7 @@ export interface BulletinAfficheProps {
     classe: string;
     section: string;
     numPerm: string;
+    bulletinId: string; // Si défini, on l'utilisera comme nom du document
     schoolId: string;
   };
   schoolInfo: {
@@ -33,13 +44,14 @@ export interface BulletinAfficheProps {
     nom: string;
     code: string;
   };
+  accountType?: 'school' | 'teacher' | string;
 }
 
 interface GradeEntry {
   studentId?: string;
   studentName: string;
   numPerm: string;
-  grades: string[]; // Les notes sont sauvegardées sous forme de chaînes
+  grades: string[];
   course: string;
   class: string;
   timestamp: string;
@@ -72,25 +84,45 @@ interface Rankings {
   overall: { rank: number; total: number };
 }
 
-const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo }) => {
-  // Filtrer les sections selon la classe de l'élève
+const safePercentage = (value: number, total: number): string => {
+  if (total === 0 || value === undefined || value === null || isNaN(value)) return "0";
+  const percentage = (value / total) * 100;
+  return percentage.toFixed(1);
+};
+
+const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo, accountType = '' }) => {
+  // Gestion du rôle connecté
+  const [userRole, setUserRole] = useState<string>('');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDocRef = doc(firestore, "users", firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserRole((data.role || '').toLowerCase());
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  console.log("Valeur accountType :", accountType);
+  const normalizedAccountType = accountType.toLowerCase();
   const filteredSections = useMemo(
     () => sections.filter((section) => section.classe.includes(selectedStudent.classe)),
     [selectedStudent.classe]
   );
 
-  // Calculer le nombre total de matières
   const totalSubjects = useMemo(
     () => filteredSections.reduce((count, section) => count + section.subjects.length, 0),
     [filteredSections]
   );
 
-  // Stocker les notes sous forme de (number | null)[][] pour conserver l'information sur la complétude
   const [allGrades, setAllGrades] = useState<(number | null)[][]>(
     Array(totalSubjects).fill(null).map(() => Array(6).fill(null))
   );
 
-  // Réinitialiser les notes si le nombre de matières change
   useEffect(() => {
     setAllGrades(Array(totalSubjects).fill(null).map(() => Array(6).fill(null)));
   }, [totalSubjects]);
@@ -103,30 +135,29 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     });
   };
 
-  // Calcul des totaux et pourcentages (en remplaçant null par 0 pour le calcul)
   const totals: Totals = useMemo(
     () => calculateTotals(allGrades.map(row => row.map(val => val ?? 0))),
     [allGrades]
   );
   const maxTotals: MaxTotals = useMemo(() => calculateMaxTotals(filteredSections), [filteredSections]);
   const percentages = {
-    percent1erP: calculatePercentage(totals.sum1erP, maxTotals.sumMax1erP),
-    percent2emeP: calculatePercentage(totals.sum2emeP, maxTotals.sumMax2emeP),
-    percentExam1: calculatePercentage(totals.sumExam1, maxTotals.sumMaxExam1),
-    percentTotal1: calculatePercentage(totals.sumTotal1, maxTotals.sumMaxTotal1),
-    percent3emeP: calculatePercentage(totals.sum3emeP, maxTotals.sumMax3emeP),
-    percent4emeP: calculatePercentage(totals.sum4emeP, maxTotals.sumMax4emeP),
-    percentExam2: calculatePercentage(totals.sumExam2, maxTotals.sumMaxExam2),
-    percentTotal2: calculatePercentage(totals.sumTotal2, maxTotals.sumMaxTotal2),
-    percentGeneral: calculatePercentage(totals.sumGeneral, maxTotals.totalMaxGeneralDisplayed),
+    percent1erP: safePercentage(totals.sum1erP, maxTotals.sumMax1erP),
+    percent2emeP: safePercentage(totals.sum2emeP, maxTotals.sumMax2emeP),
+    percentExam1: safePercentage(totals.sumExam1, maxTotals.sumMaxExam1),
+    percentTotal1: safePercentage(totals.sumTotal1, maxTotals.sumMaxTotal1),
+    percent3emeP: safePercentage(totals.sum3emeP, maxTotals.sumMax3emeP),
+    percent4emeP: safePercentage(totals.sum4emeP, maxTotals.sumMax4emeP),
+    percentExam2: safePercentage(totals.sumExam2, maxTotals.sumMaxExam2),
+    percentTotal2: safePercentage(totals.sumTotal2, maxTotals.sumMaxTotal2),
+    percentGeneral: safePercentage(totals.sumGeneral, maxTotals.totalMaxGeneralDisplayed),
   };
 
   const flattenedSubjects = useMemo(() => {
     return filteredSections.reduce((acc, section) => acc.concat(section.subjects), [] as Subject[]);
   }, [filteredSections]);
 
-  // Récupérer les entrées de notes depuis Firestore
   const [gradeEntries, setGradeEntries] = useState<GradeEntry[]>([]);
+  const [bulletinId, setBulletinId] = useState<string | null>(null);
   useEffect(() => {
     async function fetchGrades() {
       if (!selectedStudent.schoolId) {
@@ -146,7 +177,6 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     fetchGrades();
   }, [selectedStudent]);
 
-  // Mapping des notes pour l'élève sélectionné
   const initialGradesMapping: Record<string, (number | null)[]> = useMemo(() => {
     const mapping: Record<string, (number | null)[]> = {};
     gradeEntries
@@ -161,7 +191,6 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     return mapping;
   }, [gradeEntries, selectedStudent]);
 
-  // Calcul des agrégats pour le classement
   const studentAggregates: StudentAggregate[] = useMemo(() => {
     const aggregatesMap = new Map<string, {
       firstP: number;
@@ -220,6 +249,87 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     overall: rankFor('overall')
   }), [studentAggregates, selectedStudent]);
 
+  const handleSaveBulletin = async () => {
+    try {
+      const bulletinCollectionRef = collection(firestore, "publicBulletins");
+      
+      // Conversion de la matrice 2D en objet indexé par le nom de la matière
+      const flattenedGrades = allGrades.reduce<Record<string, (number | null)[]>>((acc, row, index) => {
+        const subjectName = flattenedSubjects[index]?.name || `subject_${index}`;
+        acc[subjectName] = row.map(val => (val === null || val === undefined) ? null : Number(val));
+        return acc;
+      }, {});
+      
+      const gradesMetadata = {
+        rowCount: allGrades.length,
+        colCount: allGrades[0]?.length || 0
+      };
+      
+      const sanitizedTotals = Object.entries(totals).reduce((acc: Totals, [key, value]) => {
+        (acc as any)[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+        return acc;
+      }, {} as Totals);
+      
+      const sanitizedMaxTotals = Object.entries(maxTotals).reduce((acc, [key, value]) => {
+        acc[key as keyof MaxTotals] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+        return acc;
+      }, {} as MaxTotals);
+      
+      const sanitizedPercentages = Object.entries(percentages).reduce((acc, [key, value]) => {
+        acc[key] = value || "0";
+        return acc;
+      }, {} as Record<string, string>);
+      
+      const sanitizedStudent = {
+        displayName: selectedStudent.displayName || "",
+        sexe: selectedStudent.sexe || "",
+        neEA: selectedStudent.neEA || "",
+        naissance: selectedStudent.naissance || "",
+        classe: selectedStudent.classe || "",
+        section: selectedStudent.section || "",
+        numPerm: selectedStudent.numPerm || "",
+        schoolId: selectedStudent.schoolId || ""
+      };
+      
+      const sanitizedSchool = {
+        province: schoolInfo.province || "",
+        ville: schoolInfo.ville || "",
+        commune: schoolInfo.commune || "",
+        nom: schoolInfo.nom || "",
+        code: schoolInfo.code || ""
+      };
+      
+      const bulletinData = {
+        student: sanitizedStudent,
+        school: sanitizedSchool,
+        grades: flattenedGrades,
+        gradesMetadata: gradesMetadata,
+        totals: sanitizedTotals,
+        maxTotals: sanitizedMaxTotals,
+        percentages: sanitizedPercentages,
+        timestamp: serverTimestamp()
+      };
+
+      // Si bulletinId est défini dans selectedStudent, on l'utilise comme nom du document.
+      if(selectedStudent.bulletinId) {
+        const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
+        // setDoc permet de créer ou mettre à jour le document avec cet ID
+        await setDoc(bulletinDocRef, bulletinData, { merge: true });
+        console.log("Bulletin enregistré/mis à jour avec l'ID personnalisé :", selectedStudent.bulletinId);
+        alert("Bulletin enregistré/mis à jour avec succès !");
+      } else {
+        // Sinon, création d'un document avec un ID généré automatiquement
+        const docRef = await addDoc(bulletinCollectionRef, bulletinData);
+        setBulletinId(docRef.id);
+        console.log("Document sauvegardé avec ID généré :", docRef.id);
+        alert("Bulletin enregistré avec succès !");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement du bulletin :", error);
+      alert(`Erreur lors de l'enregistrement du bulletin: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
       <div className="transform scale-30 md:scale-100 origin-top">
@@ -239,6 +349,14 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
             />
           </div>
           <BulletinFooter />
+          {(userRole === 'école' || userRole === 'professeur') && (
+            <button
+              onClick={handleSaveBulletin}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Sauvegarder le Bulletin
+            </button>
+          )}
         </div>
       </div>
     </div>
