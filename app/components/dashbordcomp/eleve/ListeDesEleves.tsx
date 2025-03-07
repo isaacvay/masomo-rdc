@@ -40,6 +40,7 @@ interface Student {
   password: string;
   paiement?: boolean;
   schoolId: string;
+  bulletinId?: string; // Ajout de la propriété bulletinId
 }
 
 interface SchoolInfo {
@@ -291,7 +292,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
 
 
               <BulletinAffiche
-                selectedStudent={selectedStudent}
+                selectedStudent={{ ...selectedStudent, bulletinId: selectedStudent.bulletinId || '' }}
                 schoolInfo={schoolInfo || dummySchoolInfo}
               />
             </div>
