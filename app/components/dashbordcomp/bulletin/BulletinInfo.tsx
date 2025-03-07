@@ -59,14 +59,13 @@ const BulletinInfo: React.FC<BulletinInfoProps> = ({ selectedStudent, schoolInfo
           <p><span className="font-bold">ECOLE :</span> {schoolInfo?.nom || "Nom de l'école"}</p>
           <p><span className="font-bold">CODE :</span> {schoolInfo?.code || "Code"}</p>
         </div>
-        <div>
+        <div className="grid grid-cols-2">
+          <div>
           <p className="font-bold uppercase">
             <span className="font-medium">ELEVE :</span> {selectedStudent.displayName} 
-            <span className="font-medium pl-10">SEXE :</span> {selectedStudent.sexe}
           </p>
           <p className="font-bold uppercase">
             <span className="font-medium">NE (E) A :</span> {selectedStudent.neEA} 
-            <span className="font-medium pl-10">LE :</span> {formatDate(selectedStudent.naissance)}
           </p>
           <p className="font-bold">
             <span className="font-medium">CLASSE :</span> {selectedStudent.classe}
@@ -74,6 +73,16 @@ const BulletinInfo: React.FC<BulletinInfoProps> = ({ selectedStudent, schoolInfo
           <p className="font-bold">
             <span className="font-medium pr-2">N° PERM :</span> {selectedStudent.numPerm}
           </p>
+          </div>
+          <div>
+          <p className="font-bold uppercase">
+            <span className="font-medium ">SEXE :</span> {selectedStudent.sexe}
+          </p>
+          <p className="font-bold uppercase">
+            <span className="font-medium ">LE :</span> {formatDate(selectedStudent.naissance)}
+          </p>
+          </div>
+          
         </div>
       </div>
 
