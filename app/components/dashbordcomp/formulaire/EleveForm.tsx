@@ -45,9 +45,9 @@ export default function AddEleve() {
       return;
     }
     try {
-      // Génération du mot de passe et du code bulletin
+      // Génération du mot de passe et du code bulletinId
       const password = generateRandomPassword();
-      const bulletin = generateRandomPassword(10);
+      const bulletinId = generateRandomPassword(10);
 
       // Génération de l'email de base sans suffixe
       const baseEmail = `${name.toLowerCase().replace(/\s+/g, "")}@elev.masomordc.cd`;
@@ -105,7 +105,7 @@ export default function AddEleve() {
         numPerm,
         email,
         password, // Ajout du mot de passe
-        bulletin, // Ajout du code unique pour le bulletin
+        bulletinId, // Ajout du code unique pour le bulletinId
         schoolId, // Utilisation du schoolId défini ci-dessus
         createdAt: new Date(),
       };
