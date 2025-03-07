@@ -242,34 +242,34 @@ const BulletinTable: React.FC<BulletinTableProps> = ({
           <td className="border px-2 py-1 font-bold">POURCENTAGE</td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
           <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 0) ? percent1erP : ""}
+            {hasAnyForColumn(gradesMatrix, 0) ? percent1erP : ""}%
           </td>
           <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 1) ? percent2emeP : ""}
-          </td>
-          <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
-          <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 2) ? percentExam1 : ""}
-          </td>
-          <td className="border px-2 py-1 text-center">
-            {completeFirstSem ? percentTotal1 : ""}
+            {hasAnyForColumn(gradesMatrix, 1) ? percent2emeP : ""}%
           </td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
           <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 3) ? percent3emeP : ""}
+            {hasAnyForColumn(gradesMatrix, 2) ? percentExam1 : ""}%
           </td>
           <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 4) ? percent4emeP : ""}
+            {completeFirstSem ? percentTotal1 : ""}%
           </td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
           <td className="border px-2 py-1 text-center">
-            {hasAnyForColumn(gradesMatrix, 5) ? percentExam2 : ""}
+            {hasAnyForColumn(gradesMatrix, 3) ? percent3emeP : ""}%
           </td>
           <td className="border px-2 py-1 text-center">
-            {completeSecondSem ? percentTotal2 : ""}
+            {hasAnyForColumn(gradesMatrix, 4) ? percent4emeP : ""}%
+          </td>
+          <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
+          <td className="border px-2 py-1 text-center">
+            {hasAnyForColumn(gradesMatrix, 5) ? percentExam2 : ""}%
           </td>
           <td className="border px-2 py-1 text-center">
-            {completeGeneral ? percentGeneral : ""}
+            {completeSecondSem ? percentTotal2 : ""}%
+          </td>
+          <td className="border px-2 py-1 text-center">
+            {completeGeneral ? percentGeneral : ""}%
           </td>
           <td className="border px-2 py-1 text-center bg-gray-500 border-gray-500"></td>
           <td className="border px-2 py-1 text-center"></td>
