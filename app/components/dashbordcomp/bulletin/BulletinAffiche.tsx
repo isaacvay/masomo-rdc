@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
+import QRCode from "react-qr-code";
 import BulletinHeader from './BulletinHeader';
 import BulletinInfo from './BulletinInfo';
 import BulletinTable from './BulletinTable';
@@ -330,6 +331,13 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     }
   };
 
+ // URL du QR code
+const qrCodeUrl = useMemo(() => {
+  return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
+}, [selectedStudent.bulletinId]);
+
+
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
       <div className="transform scale-30 md:scale-100 origin-top">
@@ -349,17 +357,33 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
             />
           </div>
           <BulletinFooter />
-          <div className="mt-4 flex justify-between">
-          {(userRole === 'école' || userRole === 'professeur') && (
-            <button
-              onClick={handleSaveBulletin}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+
+          <div className="mt-4 flex justify-between items-center">
+            {(userRole === 'école' || userRole === 'professeur') && (
+              <button
+                onClick={handleSaveBulletin}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Sauvegarder le Bulletin
+              </button>
+            )}
+            <div className="flex flex-col items-center text-right">
+            {/* Affichage conditionnel du QR code */}
+            <div className=" flex flex-col items-center">
+              <QRCode value={qrCodeUrl} size={60} />
+            </div>
+
+            {/* Le texte cliquable pour générer le QR code */}
+            <div 
+              className="mt-4 text-right text-gray-600 cursor-pointer"
             >
-              Sauvegarder le Bulletin
-            </button>
-          )}
-          <div className="mt-4 text-right text-gray-600  "> Code de Verification: <strong>{selectedStudent.bulletinId}</strong></div>
+              Code de Verification: <strong>{selectedStudent.bulletinId}</strong>
+            </div>
           </div>
+
+            </div>
+         
+
         </div>
       </div>
     </div>
