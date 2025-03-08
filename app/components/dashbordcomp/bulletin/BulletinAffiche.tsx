@@ -349,6 +349,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
             />
           </div>
           <BulletinFooter />
+          <div className="mt-4 flex justify-between">
           {(userRole === 'école' || userRole === 'professeur') && (
             <button
               onClick={handleSaveBulletin}
@@ -357,6 +358,8 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
               Sauvegarder le Bulletin
             </button>
           )}
+          <div className="mt-4 text-right text-gray-600  "> Code de Verification: <strong>{selectedStudent.bulletinId}</strong></div>
+          </div>
         </div>
       </div>
     </div>
