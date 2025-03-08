@@ -49,6 +49,11 @@ function Navbar() {
             </Link>
           </li>
           <li>
+            <Link href="/pages/verification-bulletin" prefetch className="hover:text-[#e69f25] transition duration-300">
+              Vérification
+            </Link>
+          </li>
+          <li>
             <Link href="/pages/a-propos" prefetch className="hover:text-[#e69f25] transition duration-300">
               À propos
             </Link>
@@ -141,6 +146,16 @@ function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Fonctionnalités
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/pages/verification-bulletin"
+                  prefetch
+                  className="hover:text-[#e69f25] transition duration-300"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Vérification
                 </Link>
               </li>
               <li>
