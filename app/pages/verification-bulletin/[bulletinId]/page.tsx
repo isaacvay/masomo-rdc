@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { firestore } from "@/config/firebase";
@@ -8,15 +8,15 @@ import { Bulletin } from "@/app/components/verify/BulletinTypes";
 import { CheckIcon, ExclamationTriangleIcon, QrCodeIcon } from "@/app/components/verify/VerificateurBulletinIcons";
 import BulletinDisplay from "@/app/components/verify/BulletinDisplay";
 
-
 export default function VerificateurBulletin() {
   const [code, setCode] = useState("");
   const [bulletin, setBulletin] = useState<Bulletin | null>(null);
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
 
-  // Utilisation de useParams pour récupérer bulletinId depuis l'URL
-  const { bulletinId } = useParams();
+  // Récupération du bulletinId via le query parameter
+  const searchParams = useSearchParams();
+  const bulletinIdFromQuery = searchParams.get("bulletinId");
 
   const fetchBulletin = async (bulletinId: string) => {
     setError("");
@@ -122,24 +122,23 @@ export default function VerificateurBulletin() {
   };
 
   useEffect(() => {
-    if (bulletinId) {
-      setCode(bulletinId as string);
-      fetchBulletin(bulletinId as string); // Vérification automatique via l'URL
+    if (bulletinIdFromQuery) {
+      setCode(bulletinIdFromQuery);
+      fetchBulletin(bulletinIdFromQuery);
     }
-  }, [bulletinId]);
+  }, [bulletinIdFromQuery]);
 
   useEffect(() => {
     if (code.length === 0) setError("");
   }, [code]);
 
-  const simulateScan = () => {
+  // Si vous simulez également un scan, vous pouvez déclencher la vérification
+  const simulateScan = async () => {
     setIsScanning(true);
-    setTimeout(() => {
-      if (bulletin) {
-        setCode(bulletin.id);
-      } else {
-        setCode("KIN2023-456");
-      }
+    setTimeout(async () => {
+      const scannedCode = "KIN2023-456"; // Code simulé à partir du QR code
+      setCode(scannedCode);
+      await fetchBulletin(scannedCode);
       setIsScanning(false);
     }, 1500);
   };
