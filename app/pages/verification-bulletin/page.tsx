@@ -5,6 +5,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { sections } from "@/data/cours";
 import BulletinHeader from "@/app/components/dashbordcomp/bulletin/BulletinHeader";
 import BulletinFooter from "@/app/components/dashbordcomp/bulletin/BulletinFooter";
+import { useRouter } from "next/router";
+import QRCode from "react-qr-code";
 
 /* ----------------- Interfaces ----------------- */
 
@@ -473,6 +475,16 @@ const BulletinDisplay = ({ bulletin }: { bulletin: Bulletin }) => (
       />
     </div>
     <BulletinFooter/>
+    // Dans BulletinDisplay.tsx
+   <div className="flex flex-col items-center mt-8">
+  <QRCode 
+    value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
+    size={60} 
+  />
+  <div className="mt-4 text-center">
+    Code de vérification : <strong>{bulletin.id}</strong>
+  </div>
+</div>
   </div>
 );
 
@@ -623,14 +635,29 @@ export default function VerificateurBulletin() {
     await fetchBulletin(code);
   };
 
-  // Simulation de scan (exemple d'un QR code)
-  const simulateScan = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      setCode("KIN2023-456");
-      setIsScanning(false);
-    }, 1500);
-  };
+  const VerificateurBulletin = () => {
+    const router = useRouter();
+    const { bulletinId } = router.query;
+  
+    useEffect(() => {
+      if (bulletinId) {
+        setCode(bulletinId as string);
+        fetchBulletin(bulletinId as string); // Auto-vérification
+      }
+    }, [bulletinId]);
+  }
+
+const simulateScan = () => {
+  setIsScanning(true);
+  setTimeout(() => {
+    if (bulletin) {
+      setCode(bulletin.id); // Utilise l'ID du bulletin chargé
+    } else {
+      setCode("KIN2023-456"); // Valeur par défaut pour les tests
+    }
+    setIsScanning(false);
+  }, 1500);
+};
 
   useEffect(() => {
     if (code.length === 0) setError("");
