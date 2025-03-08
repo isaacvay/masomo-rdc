@@ -307,12 +307,16 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                 </button>
               </div>
               <ProfileEleve
+                uid={selectedStudent.id}
+                bulletinId={selectedStudent.bulletinId || ""}
                 {...selectedStudent}
                 onRetour={() => {
                   setSelectedStudent(null);
                   setShowBulletin(false);
                 }}
               />
+
+
             </div>
           )}
         </div>
