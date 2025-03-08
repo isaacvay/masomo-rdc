@@ -475,7 +475,6 @@ const BulletinDisplay = ({ bulletin }: { bulletin: Bulletin }) => (
       />
     </div>
     <BulletinFooter/>
-    // Dans BulletinDisplay.tsx
    <div className="flex flex-col items-center mt-8">
   <QRCode 
     value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
