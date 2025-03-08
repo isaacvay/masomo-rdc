@@ -148,36 +148,40 @@ export default function VerificateurBulletin() {
     await fetchBulletin(code);
   };
 
+
   return (
-    <div className="min-h-[70vh] bg-gradient-to-br mt-20 from-blue-50 to-yellow-50 flex items-start justify-center p-8">
+    <div className="min-h-[70vh] bg-gradient-to-br mt-16 md:mt-20 from-blue-50 to-yellow-50 
+                    flex items-start justify-center px-4 md:px-8 pt-4 md:pt-8 overflow-x-hidden">
       <div className="w-full max-w-7xl bg-white rounded-2xl shadow-xl">
-        <header className="p-8 bg-blue-600 rounded-t-2xl">
-          <div className="flex items-center gap-4">
+        {/* Header responsive */}
+        <header className="px-4 py-4 md:px-8 md:py-6 bg-blue-600 rounded-t-2xl">
+          <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="bg-white p-2 rounded-lg">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Flag_of_the_Democratic_Republic_of_the_Congo.svg/1200px-Flag_of_the_Democratic_Republic_of_the_Congo.svg.png"
                 alt="Drapeau RDC"
-                className="h-12 w-16 object-cover"
+                className="h-10 w-14 md:h-12 md:w-16 object-cover"
               />
             </div>
-            <div className="text-white">
-              <h1 className="text-2xl font-bold">
+            <div className="text-white text-center md:text-left">
+              <h1 className="text-xl md:text-2xl font-bold">
                 SYSTÈME NATIONAL DE VÉRIFICATION DES BULLETINS
               </h1>
-              <p className="text-sm">
+              <p className="text-xs md:text-sm">
                 Ministère de l'Enseignement Primaire, Secondaire et Technique
               </p>
             </div>
           </div>
         </header>
-        <main className="p-8">
-          <form onSubmit={handleFormSubmit} className="mb-8">
-            <div className="bg-blue-50 p-6 rounded-xl">
-              <div className="flex gap-4">
+
+        <main className="p-4 md:p-8">
+          <form onSubmit={handleFormSubmit} className="mb-6 md:mb-8">
+            <div className="bg-blue-50 p-4 md:p-6 rounded-xl">
+              <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">
+                  <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-blue-500">
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 md:w-6 md:h-6"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -195,19 +199,22 @@ export default function VerificateurBulletin() {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Entrez le BulletinId"
-                    className="w-full px-6 py-4 pl-12 text-lg border-2 border-blue-200/50 hover:border-blue-300 focus:border-blue-500 rounded-xl focus:ring-4 focus:ring-blue-100/50 placeholder:text-blue-400/70 transition-all duration-200 bg-white/90 shadow-sm hover:shadow-md focus:shadow-lg"
+                    className="w-full px-4 md:px-6 py-3 md:py-4 pl-10 md:pl-12 text-base md:text-lg 
+                               border-2 border-blue-200/50 hover:border-blue-300 focus:border-blue-500 
+                               rounded-xl focus:ring-4 focus:ring-blue-100/50 placeholder:text-blue-400/70 
+                               transition-all duration-200 bg-white/90 shadow-sm hover:shadow-md focus:shadow-lg"
                     autoComplete="off"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+                  <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 flex gap-2">
                     {code && (
                       <button
                         type="button"
                         onClick={() => setCode("")}
-                        className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                        className="p-1 md:p-1.5 text-blue-400 hover:text-blue-600 transition-colors"
                         aria-label="Effacer"
                       >
                         <svg
-                          className="w-5 h-5"
+                          className="w-5 h-5 md:w-6 md:h-6"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -225,41 +232,47 @@ export default function VerificateurBulletin() {
                       type="button"
                       onClick={simulateScan}
                       disabled={isScanning}
-                      className={`p-2 rounded-lg ${
+                      className={`p-2 md:p-2.5 rounded-lg ${
                         isScanning
                           ? "text-blue-400 cursor-wait"
                           : "text-blue-600 hover:bg-blue-50"
                       } transition-colors`}
                     >
                       {isScanning ? (
-                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 md:w-6 md:h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       ) : (
-                        <QrCodeIcon className="w-6 h-6" />
+                        <QrCodeIcon className="w-5 h-5 md:w-6 md:h-6" />
                       )}
                     </button>
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="px-8 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                  className="px-4 py-3 md:px-8 md:py-4 bg-gradient-to-r from-green-500 to-blue-600 
+                             hover:from-green-600 hover:to-blue-700 text-white font-semibold rounded-xl 
+                             transition-all transform hover:scale-[1.02] flex items-center justify-center 
+                             gap-2 md:gap-3 shadow-lg hover:shadow-xl"
                 >
-                  <CheckIcon className="w-6 h-6" />
-                  Vérifier
+                  <CheckIcon className="w-5 h-5 md:w-6 md:h-6" />
+                  <span className="hidden md:inline">Vérifier</span>
                 </button>
               </div>
               {error && (
-                <div className="mt-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg flex items-center gap-3 animate-fade-in">
+                <div className="mt-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg 
+                               flex items-center gap-3 animate-fade-in">
                   <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">Erreur de vérification</p>
-                    <p className="text-sm">{error}</p>
+                    <p className="font-medium text-sm md:text-base">Erreur de vérification</p>
+                    <p className="text-xs md:text-sm">{error}</p>
                   </div>
                 </div>
               )}
             </div>
           </form>
-          {bulletin && <BulletinDisplay bulletin={bulletin} />}
-          <div className="mt-8 text-center text-sm text-gray-600">
+         {bulletin && ( 
+                        <BulletinDisplay bulletin={bulletin} />
+ )}
+          <div className="mt-6 md:mt-8 text-center text-xs md:text-sm text-gray-600">
             <p>
               Système officiel de vérification - Toute falsification est passible de
               poursuites judiciaires
