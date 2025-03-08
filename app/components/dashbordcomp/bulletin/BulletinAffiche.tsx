@@ -358,33 +358,32 @@ const qrCodeUrl = useMemo(() => {
           </div>
           <BulletinFooter />
 
-          <div className="mt-4 flex justify-between items-center">
-            {(userRole === 'école' || userRole === 'professeur') && (
-              <button
-                onClick={handleSaveBulletin}
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Sauvegarder le Bulletin
-              </button>
-            )}
-            <div className="flex flex-col items-center text-right">
-            {/* Affichage conditionnel du QR code */}
-            <div className=" flex flex-col items-center">
-              <QRCode value={qrCodeUrl} size={60} />
+          <div className="mt-4 flex items-center">
+              {/* Bouton conditionnel pour les rôles spécifiques */}
+              {(userRole === 'école' || userRole === 'professeur') && (
+                <button
+                  onClick={handleSaveBulletin}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Sauvegarder le Bulletin
+                </button>
+              )}
+
+              {/* Conteneur aligné à droite */}
+              <div className="ml-auto flex flex-col items-end text-right">
+                {/* QR Code centré horizontalement dans son conteneur */}
+                <div className="flex justify-center w-full">
+                  <QRCode value={qrCodeUrl} size={60} />
+                </div>
+
+                {/* Code de vérification avec texte aligné à droite */}
+                <div className="mt-4 text-gray-600 cursor-pointer">
+                  Code de Vérification: <strong>{selectedStudent.bulletinId}</strong>
+                </div>
+              </div>
             </div>
 
-            {/* Le texte cliquable pour générer le QR code */}
-            <div 
-              className="mt-4 text-right text-gray-600 cursor-pointer"
-            >
-              Code de Verification: <strong>{selectedStudent.bulletinId}</strong>
-            </div>
           </div>
-
-            </div>
-         
-
-        </div>
       </div>
     </div>
   );
