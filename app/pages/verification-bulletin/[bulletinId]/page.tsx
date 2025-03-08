@@ -5,8 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { firestore } from "@/config/firebase";
 import { sections } from "@/data/cours";
 import { Bulletin } from "@/app/components/verify/BulletinTypes";
-import { QrCodeIcon } from "lucide-react";
-import { CheckIcon, ExclamationTriangleIcon } from "@/app/components/verify/VerificateurBulletinIcons";
+import { CheckIcon, ExclamationTriangleIcon, QrCodeIcon } from "@/app/components/verify/VerificateurBulletinIcons";
 import BulletinDisplay from "@/app/components/verify/BulletinDisplay";
 
 
