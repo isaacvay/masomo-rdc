@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   UserCircle,
   Calendar,
@@ -15,9 +15,19 @@ import {
   Check,
 } from "lucide-react";
 import { auth, firestore } from "@/config/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
+import { sections } from "@/data/cours";
+
+// Fonction utilitaire pour générer une chaîne aléatoire (utilisée ici pour le bulletinId)
+const generateRandomPassword = (length = 8): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length }, () =>
+    chars.charAt(Math.floor(Math.random() * chars.length))
+  ).join("");
+};
 
 interface ProfileEleveProps {
+  uid: string; // UID du document dans "users"
   displayName: string;
   sexe: string;
   neEA: string;
@@ -27,10 +37,12 @@ interface ProfileEleveProps {
   numPerm: string;
   email: string;
   password: string;
+  bulletinId: string;
   onRetour: () => void;
 }
 
 export default function ProfileEleve({
+  uid,
   displayName,
   sexe,
   neEA,
@@ -40,6 +52,7 @@ export default function ProfileEleve({
   numPerm,
   email,
   password,
+  bulletinId,
   onRetour,
 }: ProfileEleveProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -53,11 +66,38 @@ export default function ProfileEleve({
     classe,
     numPerm,
     email,
+    bulletinId,
   });
   const [copiedField, setCopiedField] = useState<"email" | "password" | null>(null);
 
+  // Options pour les sélecteurs
+  const sexeOptions = ["Masculin", "Féminin"];
+  const sectionOptions = useMemo(
+    () => Array.from(new Set(sections.map((sec) => sec.category))),
+    []
+  );
+  const classeOptions = useMemo(() => {
+    return editableProfile.section
+      ? sections
+          .filter((sec) => sec.category === editableProfile.section)
+          .flatMap((sec) => sec.classe)
+      : [];
+  }, [editableProfile.section]);
+
   const handleChange = (field: string, value: string) => {
-    setEditableProfile((prev) => ({ ...prev, [field]: value }));
+    if (field === "section") {
+      // Changement de section : on réinitialise la classe (mais pas le bulletinId)
+      setEditableProfile((prev) => ({ ...prev, section: value, classe: "" }));
+    } else if (field === "classe") {
+      // Changement de classe : on met à jour la classe ET on génère un nouveau bulletinId
+      setEditableProfile((prev) => ({
+        ...prev,
+        classe: value,
+        bulletinId: generateRandomPassword(10),
+      }));
+    } else {
+      setEditableProfile((prev) => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleCopy = async (text: string, field: "email" | "password") => {
@@ -72,19 +112,15 @@ export default function ProfileEleve({
 
   const handleSave = async () => {
     try {
-      const schoolUid = auth.currentUser?.uid;
-      if (!schoolUid) throw new Error("Aucune école connectée");
-
-      // Utiliser "schools" au lieu de "ecoles" pour la nouvelle architecture
-      const studentRef = doc(firestore, "schools", schoolUid, "eleves", numPerm);
-      await updateDoc(studentRef, {
-        ...editableProfile,
-      });
+      console.log("Mise à jour de l'utilisateur", { uid, editableProfile });
+      const userRef = doc(firestore, "users", uid);
+      await setDoc(userRef, { ...editableProfile }, { merge: true });
+      console.log("Mise à jour réussie");
       setEditMode(false);
       alert("Profil mis à jour avec succès !");
     } catch (error: any) {
       console.error("Erreur lors de la mise à jour du profil :", error);
-      alert("Erreur lors de la mise à jour du profil");
+      alert("Erreur lors de la mise à jour du profil : " + error.message);
     }
   };
 
@@ -113,18 +149,17 @@ export default function ProfileEleve({
             </div>
           </div>
         </div>
-
         <div className="p-6 sm:p-8 space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <SectionTitle icon={<UserCircle className="h-5 w-5" />} title="Informations Personnelles" />
-
               <EditableField
                 editMode={editMode}
                 label="Sexe"
                 icon={<Users className="h-5 w-5" />}
                 value={editableProfile.sexe}
                 onChange={(v) => handleChange("sexe", v)}
+                options={sexeOptions}
               />
               <EditableField
                 editMode={editMode}
@@ -143,7 +178,6 @@ export default function ProfileEleve({
                 inputType="date"
               />
             </div>
-
             <div className="space-y-6">
               <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="Scolarité" />
               <EditableField
@@ -152,6 +186,7 @@ export default function ProfileEleve({
                 icon={<Hash className="h-5 w-5" />}
                 value={editableProfile.section}
                 onChange={(v) => handleChange("section", v)}
+                options={sectionOptions}
               />
               <EditableField
                 editMode={editMode}
@@ -159,6 +194,7 @@ export default function ProfileEleve({
                 icon={<Hash className="h-5 w-5" />}
                 value={editableProfile.classe}
                 onChange={(v) => handleChange("classe", v)}
+                options={classeOptions}
               />
               <EditableField
                 editMode={editMode}
@@ -169,11 +205,9 @@ export default function ProfileEleve({
               />
             </div>
           </div>
-
           <div className="space-y-6">
             <SectionTitle icon={<Key className="h-5 w-5" />} title="Identifiants" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* L'email reste en lecture seule */}
               <EditableField
                 editMode={false}
                 label="Email"
@@ -217,7 +251,6 @@ export default function ProfileEleve({
               </div>
             </div>
           </div>
-
           <div className="flex flex-wrap gap-4 justify-end border-t pt-6">
             {editMode ? (
               <>
@@ -227,7 +260,18 @@ export default function ProfileEleve({
                 <Button
                   onClick={() => {
                     setEditMode(false);
-                    setEditableProfile({ displayName, sexe, neEA, naissance, section, classe, numPerm, email });
+                    // Réinitialisation en cas d'annulation
+                    setEditableProfile({
+                      displayName,
+                      sexe,
+                      neEA,
+                      naissance,
+                      section,
+                      classe,
+                      numPerm,
+                      email,
+                      bulletinId,
+                    });
                   }}
                   variant="secondary"
                 >
@@ -256,6 +300,18 @@ const SectionTitle = ({ icon, title }: { icon: React.ReactNode; title: string })
   </div>
 );
 
+interface EditableFieldProps {
+  editMode: boolean;
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  inputType?: string;
+  onCopy?: () => void;
+  copied?: boolean;
+  options?: string[];
+}
+
 const EditableField = ({
   editMode,
   label,
@@ -265,28 +321,34 @@ const EditableField = ({
   inputType = "text",
   onCopy,
   copied,
-}: {
-  editMode: boolean;
-  label: string;
-  icon: React.ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  inputType?: string;
-  onCopy?: () => void;
-  copied?: boolean;
-}) => (
+  options,
+}: EditableFieldProps) => (
   <div className="group relative p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
     <label className="text-sm font-medium text-gray-500">{label}</label>
     <div className="mt-1 flex items-center gap-3 justify-between">
       <div className="flex items-center gap-3 flex-1">
         <div className="text-indigo-600">{icon}</div>
         {editMode ? (
-          <input
-            type={inputType}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
-          />
+          options ? (
+            <select
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
+            >
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type={inputType}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
+            />
+          )
         ) : (
           <span className="text-gray-900 font-medium">{value}</span>
         )}
@@ -320,7 +382,6 @@ const Button = ({
     success: "bg-green-500 hover:bg-green-600 text-white",
     neutral: "bg-gray-500 hover:bg-gray-600 text-white",
   };
-
   return (
     <button
       onClick={onClick}
