@@ -29,12 +29,15 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
       <div className="mx-auto w-[75%] px-4  flex justify-between items-center h-20 relative">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <img src="/images/logo.png" alt="Logo" className="w-10 h-10" />
-          <h1 className="text-xl font-bold font-montserrat bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            MASOMO rdc
-          </h1>
-        </div>
+         <Link href="/">
+              <div className="flex items-center space-x-2">
+                <img src="/images/logo.png" alt="Logo" className="w-10 h-10" />
+                <h1 className="text-xl font-bold font-montserrat bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                  MASOMO rdc
+                </h1>
+              </div>
+         </Link>
+       
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex space-x-6 text-[#0D1B2A] font-medium">
