@@ -475,15 +475,18 @@ const BulletinDisplay = ({ bulletin }: { bulletin: Bulletin }) => (
       />
     </div>
     <BulletinFooter/>
-   <div className="flex flex-col items-center mt-8">
-  <QRCode 
-    value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
-    size={60} 
-  />
-  <div className="mt-4 text-center">
-    Code de vérification : <strong>{bulletin.id}</strong>
-  </div>
-</div>
+    <div className="ml-auto flex flex-col items-end text-right">
+            <div className="flex flex-col items-center">
+          <QRCode 
+            value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
+            size={60} 
+          />
+          <div className="mt-4 text-center">
+            Code de vérification : <strong>{bulletin.id}</strong>
+          </div>
+        </div>
+    </div>
+  
   </div>
 );
 
