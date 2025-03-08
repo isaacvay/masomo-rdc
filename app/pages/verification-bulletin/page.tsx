@@ -1,11 +1,12 @@
-import React from 'react'
-import VerificateurBulletin from './[bulletinId]/page'
+"use client";
+import React, { Suspense } from "react";
+import VerificateurBulletin from "./[bulletinId]/page";
 
 
-export default function page() {
-  return(
-    <div>
+export default function VerificationBulletinPage() {
+  return (
+    <Suspense fallback={<div>Chargement…</div>}>
       <VerificateurBulletin />
-    </div>
-  )
+    </Suspense>
+  );
 }
