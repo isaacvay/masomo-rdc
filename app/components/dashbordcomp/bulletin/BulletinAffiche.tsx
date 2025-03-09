@@ -338,9 +338,9 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   const qrCodeUrl = useMemo(() => {
     return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
   }, [selectedStudent.bulletinId]);
-
   const handleExportPDF = () => {
     if (!printRef.current) return;
+  
     html2canvas(printRef.current, { scale: 2, useCORS: true, allowTaint: false })
       .then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
@@ -352,21 +352,29 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
         const pxToMm = 25.4 / 96;
         const imgWidth = canvas.width * pxToMm;
         const imgHeight = canvas.height * pxToMm;
-        
-        // Calcul du ratio pour l'ajustement à la page
+  
+        // Calcul du ratio pour adapter l'image à la page
         const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
         const newWidth = imgWidth * ratio;
         const newHeight = imgHeight * ratio;
-        
+  
         // Centrage de l'image
         const offsetX = (pdfWidth - newWidth) / 2;
         const offsetY = (pdfHeight - newHeight) / 2;
-        
+  
         pdf.addImage(imgData, 'PNG', offsetX, offsetY, newWidth, newHeight);
-        
-        // Ouvre le PDF dans un nouvel onglet
-        const pdfBlobUrl = pdf.output('bloburl');
-        window.open(pdfBlobUrl, '_blank');
+  
+        // Détection du mobile
+        const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.navigator.maxTouchPoints > 1;
+  
+        if (isMobile) {
+          // Téléchargement automatique sur mobile
+          pdf.save(`Bulletin_${selectedStudent.numPerm}.pdf`);
+        } else {
+          // Ouvre dans un nouvel onglet sur ordinateur
+          const pdfBlobUrl = pdf.output('bloburl');
+          window.open(pdfBlobUrl, '_blank');
+        }
       })
       .catch((error) => {
         console.error("html2canvas error:", error);
@@ -388,12 +396,15 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
             Sauvegarder le Bulletin
           </button>
         )}
-        <button
+       
+          <button
           onClick={handleExportPDF}
           className="mt-2 ml-0 md:ml-4 px-4 py-2 w-full md:w-auto bg-green-500 text-white rounded hover:bg-green-600 flex justify-center items-center"
         >
           <FaPrint className="w-4 h-4 mr-2" /> Exporter en PDF
         </button>
+      
+       
       </div>
       <div className="transform scale-30 md:scale-100 origin-top">
       {/* Conteneur exporté en PDF contenant tout le bulletin */}
