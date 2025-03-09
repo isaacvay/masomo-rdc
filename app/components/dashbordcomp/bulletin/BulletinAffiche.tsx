@@ -338,6 +338,8 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   const qrCodeUrl = useMemo(() => {
     return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
   }, [selectedStudent.bulletinId]);
+
+  // Export en PDF
   const handleExportPDF = () => {
     if (!printRef.current) return;
   
@@ -368,12 +370,13 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
         const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.navigator.maxTouchPoints > 1;
   
         if (isMobile) {
-          // Téléchargement automatique sur mobile
+          // Télécharger le PDF sur mobile
           pdf.save(`Bulletin_${selectedStudent.numPerm}.pdf`);
         } else {
-          // Ouvre dans un nouvel onglet sur ordinateur
-          const pdfBlobUrl = pdf.output('bloburl');
-          window.open(pdfBlobUrl, '_blank');
+          // Ouvrir dans un nouvel onglet sur ordinateur
+          const pdfBlob = pdf.output('blob');
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          window.open(pdfUrl, '_blank');
         }
       })
       .catch((error) => {
