@@ -71,7 +71,7 @@ export default function ProfileEleve({
   const [copiedField, setCopiedField] = useState<"email" | "password" | null>(null);
 
   // Options pour les sélecteurs
-  const sexeOptions = ["Masculin", "Féminin"];
+  const sexeOptions = ["M", "F"];
   const sectionOptions = useMemo(
     () => Array.from(new Set(sections.map((sec) => sec.category))),
     []
