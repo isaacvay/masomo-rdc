@@ -40,7 +40,7 @@ interface Student {
   password: string;
   paiement?: boolean;
   schoolId: string;
-  bulletinId?: string; // Ajout de la propriété bulletinId
+  bulletinId?: string;
 }
 
 interface SchoolInfo {
@@ -54,7 +54,6 @@ interface SchoolInfo {
 interface ListeDesElevesProps {
   selectedClass?: string;
   onRetour?: () => void;
-
 }
 
 export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: ListeDesElevesProps) {
@@ -70,7 +69,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
   const [showPrintView, setShowPrintView] = useState(false);
   const [isComptable, setIsComptable] = useState(false);
 
-  // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
+  // Vérifier le rôle de l'utilisateur connecté
   useEffect(() => {
     const checkUserRole = async () => {
       const uid = auth.currentUser?.uid;
@@ -91,7 +90,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     checkUserRole();
   }, []);
 
-  // Récupérer les informations de l'école en utilisant le schoolId effectif
+  // Récupérer les informations de l'école
   useEffect(() => {
     const fetchSchoolInfo = async () => {
       let effectiveSchoolId = auth.currentUser?.uid;
@@ -100,7 +99,6 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
         return;
       }
       try {
-        // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
         const userDocRef = doc(firestore, "users", effectiveSchoolId);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
@@ -132,14 +130,13 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     fetchSchoolInfo();
   }, []);
 
-  // Récupérer les élèves de la classe sélectionnée en utilisant le schoolId effectif
+  // Récupérer les élèves de la classe sélectionnée
   useEffect(() => {
     const fetchStudents = async () => {
       try {
         let effectiveSchoolId = auth.currentUser?.uid;
         if (!effectiveSchoolId) throw new Error("Aucune école connectée");
 
-        // Vérifier si l'utilisateur connecté est un professeur avec secondRole "comptable"
         const userDocRef = doc(firestore, "users", effectiveSchoolId);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
@@ -184,29 +181,26 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
   const handleCheckboxChange = async (studentId: string) => {
     const originalState = checkedStates[studentId];
     const newState = !originalState;
-    
+
     // Mise à jour optimiste
-    setCheckedStates(prev => ({ ...prev, [studentId]: newState }));
-    
+    setCheckedStates((prev) => ({ ...prev, [studentId]: newState }));
+
     try {
       const studentDocRef = doc(firestore, "users", studentId);
       await updateDoc(studentDocRef, { paiement: newState });
     } catch (e) {
       console.error("Erreur lors de la mise à jour du paiement :", e);
-      // Revenir en arrière en cas d'erreur
-      setCheckedStates(prev => ({ ...prev, [studentId]: originalState }));
+      setCheckedStates((prev) => ({ ...prev, [studentId]: originalState }));
       setError("Échec de la mise à jour du statut de paiement");
     }
   };
 
-  // Débouncer la recherche pour limiter les recalculs
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   }, []);
 
-  // Mémoriser le filtrage
   const filteredStudents = useMemo(() => {
-    return students.filter(student =>
+    return students.filter((student) =>
       student.displayName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [students, searchTerm]);
@@ -237,7 +231,6 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     );
   }
 
-  // Si l'utilisateur a cliqué sur "Imprimer", afficher le composant ListeEleveMP
   if (showPrintView) {
     return (
       <ListeEleveMP 
@@ -260,37 +253,30 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     setShowBulletin(false);
   }
 
- 
-  
- 
-
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8">
-     {!selectedStudent && !showBulletin && onRetour && (
-          <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-              onClick={onRetour}
-              aria-label="Retour à la page précédente"
-           >
+      {!selectedStudent && !showBulletin && onRetour && (
+        <button
+          className="bg-blue-500 md:mb-0 mb-4 hover:bg-blue-600 text-white font-medium w-28 md:w-auto py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+          onClick={onRetour}
+          aria-label="Retour à la page précédente"
+        >
           <FaArrowLeft className="shrink-0" />
           <span>Retour</span>
-          </button>
-          )}
+        </button>
+      )}
       {selectedStudent ? (
         <div className="container mx-auto px-4">
           {showBulletin ? (
             <div>
               <button
-             className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-              onClick={handonRetour}
-               aria-label="Retour à la page précédente"
-               >
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                onClick={handonRetour}
+                aria-label="Retour à la page précédente"
+              >
                 <FaArrowLeft className="shrink-0" />
-                  <span>Retour</span>
-          </button>
-
-
+                <span>Retour</span>
+              </button>
               <BulletinAffiche
                 selectedStudent={{ ...selectedStudent, bulletinId: selectedStudent.bulletinId || '' }}
                 schoolInfo={schoolInfo || dummySchoolInfo}
@@ -301,7 +287,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
               <div className="flex justify-center mt-4">
                 <button
                   onClick={() => setShowBulletin(true)}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                  className="px-6 py-2 bg-indigo-600 mb-3 md:mb-0 text-white rounded hover:bg-indigo-700 transition-colors"
                 >
                   Afficher Bulletin
                 </button>
@@ -315,8 +301,6 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                   setShowBulletin(false);
                 }}
               />
-
-
             </div>
           )}
         </div>
@@ -329,7 +313,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                 <div className="flex items-center gap-4">
                   <School className="h-12 w-12 text-white/90" />
                   <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
                       Classe de {selectedClass}
                     </h1>
                     <p className="text-blue-100/90 mt-2">
@@ -387,11 +371,13 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                             <UserCircle className="h-8 w-8 text-indigo-600" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 truncate uppercase">
+                            {/* Nom de l'élève : text-base sur mobile, text-lg sur écran moyen et plus */}
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate uppercase">
                               {student.displayName}
                             </h3>
+                            {/* Email de l'élève : text-xs sur mobile, text-sm sur écran moyen et plus */}
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-sm text-indigo-600/80 font-medium">
+                              <span className="text-xs sm:text-sm text-indigo-600/80 font-medium">
                                 {student.email}
                               </span>
                             </div>
@@ -412,12 +398,9 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                               <CheckCheck className="h-5 w-5 transition-opacity opacity-0 peer-checked:opacity-100" />
                             </div>
                             <span className="text-sm font-medium text-gray-600">
-                              {checkedStates[student.id]
-                                ?  "Pas encore payé"
-                                : "Paiement effectué" }
+                              {checkedStates[student.id] ? "Pas encore payé" : "Paiement effectué"}
                             </span>
                           </label>
-                          {/* Masquer l'icône de redirection pour le comptable */}
                           {!isComptable && (
                             <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-indigo-600 ml-4 transition-colors" />
                           )}
