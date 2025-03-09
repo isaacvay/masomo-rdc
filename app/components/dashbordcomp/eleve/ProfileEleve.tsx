@@ -217,6 +217,8 @@ export default function ProfileEleve({
                 onChange={() => {}}
                 onCopy={() => handleCopy(editableProfile.email, "email")}
                 copied={copiedField === "email"}
+                // Sur mobile, le texte est réduit (text-xs) et passe à text-base à partir du breakpoint sm.
+                customValueClass="text-xs sm:text-base text-gray-900 font-medium"
               />
               <div className="group relative p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex justify-between items-center">
@@ -310,6 +312,8 @@ interface EditableFieldProps {
   onCopy?: () => void;
   copied?: boolean;
   options?: string[];
+  // Prop pour personnaliser la classe du texte affiché (utilisée ici pour l'email)
+  customValueClass?: string;
 }
 
 const EditableField = ({
@@ -322,50 +326,55 @@ const EditableField = ({
   onCopy,
   copied,
   options,
-}: EditableFieldProps) => (
-  <div className="group relative p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-    <label className="text-sm font-medium text-gray-500">{label}</label>
-    <div className="mt-1 flex items-center gap-3 justify-between">
-      <div className="flex items-center gap-3 flex-1">
-        <div className="text-indigo-600">{icon}</div>
-        {editMode ? (
-          options ? (
-            <select
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
-            >
-              {options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+  customValueClass,
+}: EditableFieldProps) => {
+  // Classe par défaut pour le rendu du texte si aucune classe personnalisée n'est fournie
+  const displayClass = customValueClass || "text-gray-900 font-medium";
+  return (
+    <div className="group relative p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+      <label className="text-sm font-medium text-gray-500">{label}</label>
+      <div className="mt-1 flex items-center gap-3 justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="text-indigo-600">{icon}</div>
+          {editMode ? (
+            options ? (
+              <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
+              >
+                {options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type={inputType}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
+              />
+            )
           ) : (
-            <input
-              type={inputType}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="w-full bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none py-1 px-2"
-            />
-          )
-        ) : (
-          <span className="text-gray-900 font-medium">{value}</span>
+            <span className={displayClass}>{value}</span>
+          )}
+        </div>
+        {!editMode && onCopy && (
+          <button
+            onClick={onCopy}
+            className="text-gray-400 hover:text-indigo-600 relative transition-colors"
+            aria-label="Copier"
+          >
+            <Copy className="h-5 w-5" />
+            {copied && <Check className="h-4 w-4 text-green-500 absolute -top-1 -right-1" />}
+          </button>
         )}
       </div>
-      {!editMode && onCopy && (
-        <button
-          onClick={onCopy}
-          className="text-gray-400 hover:text-indigo-600 relative transition-colors"
-          aria-label="Copier"
-        >
-          <Copy className="h-5 w-5" />
-          {copied && <Check className="h-4 w-4 text-green-500 absolute -top-1 -right-1" />}
-        </button>
-      )}
     </div>
-  </div>
-);
+  );
+};
 
 const Button = ({
   children,
