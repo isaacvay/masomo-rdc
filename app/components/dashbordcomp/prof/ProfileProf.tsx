@@ -59,7 +59,6 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
   const handleSave = useCallback(async () => {
     try {
       setStatus({ loading: true, error: null, success: false });
-      // Mise à jour du document du professeur dans la collection "users"
       const profRef = doc(firestore, "users", id);
       await updateDoc(profRef, formData);
       
@@ -105,15 +104,16 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
 
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8">
-          <div className="flex items-center gap-6">
+          {/* Passage en colonne sur mobile */}
+          <div className="flex flex-col sm:flex-row items-center gap-6">
             <UserCircle className="h-16 w-16 text-white/90 stroke-1" />
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-white">
+            <div className="space-y-2 w-full">
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
                 {editMode ? (
                   <input
                     value={formData.displayName}
                     onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
-                    className="bg-transparent border-b-2 border-white/30 focus:border-white/80 focus:outline-none"
+                    className="w-full bg-transparent border-b-2 border-white/30 focus:border-white/80 focus:outline-none"
                   />
                 ) : (
                   formData.displayName
@@ -151,6 +151,7 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
                 type="email"
                 onCopy={() => handleCopy(formData.email, "email")}
                 copied={copiedField === "email"}
+                scrollable
               />
 
               <EditableField
@@ -300,7 +301,7 @@ export default function ProfileProf({ id, displayName, email, password, sexe, co
 const SectionTitle = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
   <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
     <div className="text-indigo-600">{icon}</div>
-    <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
+    <h3 className="text-lg md:text-xl font-semibold text-gray-800">{title}</h3>
   </div>
 );
 
@@ -315,7 +316,8 @@ const EditableField = ({
   onCopy,
   showPassword,
   togglePassword,
-  copied
+  copied,
+  scrollable = false
 }: {
   editMode: boolean;
   label: string;
@@ -328,6 +330,7 @@ const EditableField = ({
   showPassword?: boolean;
   togglePassword?: () => void;
   copied?: boolean;
+  scrollable?: boolean;
 }) => (
   <div className="group relative p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
     <label className="block text-sm font-medium text-gray-500 mb-2">{label}</label>
@@ -353,9 +356,23 @@ const EditableField = ({
             )}
           </div>
         ) : (
-          <span className="text-gray-900 font-medium flex-1">
-            {masked && !showPassword ? "•".repeat(8) : value || "Non renseigné"}
-          </span>
+          scrollable ? (
+            <div className="flex-1 overflow-x-auto">
+              <span
+                className="text-xs md:text-base text-gray-900 font-medium whitespace-nowrap"
+                title={value || "Non renseigné"}
+              >
+                {masked && !showPassword ? "•".repeat(8) : value || "Non renseigné"}
+              </span>
+            </div>
+          ) : (
+            <span
+              className="text-sm md:text-base text-gray-900 font-medium flex-1"
+              title={value || "Non renseigné"}
+            >
+              {masked && !showPassword ? "•".repeat(8) : value || "Non renseigné"}
+            </span>
+          )
         )}
       </div>
       
