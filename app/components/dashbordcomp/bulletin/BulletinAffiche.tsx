@@ -1,5 +1,7 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import QRCode from "react-qr-code";
 import BulletinHeader from './BulletinHeader';
 import BulletinInfo from './BulletinInfo';
@@ -18,13 +20,13 @@ import {
   getDocs,
   doc,
   addDoc,
-  updateDoc,
   setDoc,
   serverTimestamp,
   getDoc
 } from 'firebase/firestore';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/config/firebase";
+import { FaPrint } from 'react-icons/fa';
 
 export interface BulletinAfficheProps {
   selectedStudent: {
@@ -35,7 +37,7 @@ export interface BulletinAfficheProps {
     classe: string;
     section: string;
     numPerm: string;
-    bulletinId: string; // Si défini, on l'utilisera comme nom du document
+    bulletinId: string;
     schoolId: string;
   };
   schoolInfo: {
@@ -92,6 +94,9 @@ const safePercentage = (value: number, total: number): string => {
 };
 
 const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, schoolInfo, accountType = '' }) => {
+  // Référence du conteneur à exporter en PDF (contenant tout le bulletin)
+  const printRef = useRef<HTMLDivElement>(null);
+
   // Gestion du rôle connecté
   const [userRole, setUserRole] = useState<string>('');
   useEffect(() => {
@@ -108,8 +113,6 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     return () => unsubscribe();
   }, []);
 
-  console.log("Valeur accountType :", accountType);
-  const normalizedAccountType = accountType.toLowerCase();
   const filteredSections = useMemo(
     () => sections.filter((section) => section.classe.includes(selectedStudent.classe)),
     [selectedStudent.classe]
@@ -120,6 +123,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     [filteredSections]
   );
 
+  // Matrice des notes (6 colonnes par matière)
   const [allGrades, setAllGrades] = useState<(number | null)[][]>(
     Array(totalSubjects).fill(null).map(() => Array(6).fill(null))
   );
@@ -157,12 +161,13 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     return filteredSections.reduce((acc, section) => acc.concat(section.subjects), [] as Subject[]);
   }, [filteredSections]);
 
+  // Récupération des notes depuis Firestore
   const [gradeEntries, setGradeEntries] = useState<GradeEntry[]>([]);
   const [bulletinId, setBulletinId] = useState<string | null>(null);
   useEffect(() => {
     async function fetchGrades() {
       if (!selectedStudent.schoolId) {
-        console.log("schoolId non défini dans selectedStudent, attente...");
+        console.log("schoolId non défini, attente...");
         return;
       }
       try {
@@ -192,6 +197,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     return mapping;
   }, [gradeEntries, selectedStudent]);
 
+  // Calcul des agrégats pour le classement
   const studentAggregates: StudentAggregate[] = useMemo(() => {
     const aggregatesMap = new Map<string, {
       firstP: number;
@@ -250,11 +256,11 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     overall: rankFor('overall')
   }), [studentAggregates, selectedStudent]);
 
+  // Enregistrement du bulletin dans Firestore
   const handleSaveBulletin = async () => {
     try {
       const bulletinCollectionRef = collection(firestore, "publicBulletins");
       
-      // Conversion de la matrice 2D en objet indexé par le nom de la matière
       const flattenedGrades = allGrades.reduce<Record<string, (number | null)[]>>((acc, row, index) => {
         const subjectName = flattenedSubjects[index]?.name || `subject_${index}`;
         acc[subjectName] = row.map(val => (val === null || val === undefined) ? null : Number(val));
@@ -311,15 +317,12 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
         timestamp: serverTimestamp()
       };
 
-      // Si bulletinId est défini dans selectedStudent, on l'utilise comme nom du document.
       if(selectedStudent.bulletinId) {
         const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
-        // setDoc permet de créer ou mettre à jour le document avec cet ID
         await setDoc(bulletinDocRef, bulletinData, { merge: true });
-        console.log("Bulletin enregistré/mis à jour avec l'ID personnalisé :", selectedStudent.bulletinId);
+        console.log("Bulletin enregistré/mis à jour :", selectedStudent.bulletinId);
         alert("Bulletin enregistré/mis à jour avec succès !");
       } else {
-        // Sinon, création d'un document avec un ID généré automatiquement
         const docRef = await addDoc(bulletinCollectionRef, bulletinData);
         setBulletinId(docRef.id);
         console.log("Document sauvegardé avec ID généré :", docRef.id);
@@ -331,60 +334,104 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
     }
   };
 
- // URL du QR code
-const qrCodeUrl = useMemo(() => {
-  return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
-}, [selectedStudent.bulletinId]);
+  // URL du QR code de vérification
+  const qrCodeUrl = useMemo(() => {
+    return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
+  }, [selectedStudent.bulletinId]);
 
-
+  const handleExportPDF = () => {
+    if (!printRef.current) return;
+    html2canvas(printRef.current, { scale: 2, useCORS: true, allowTaint: false })
+      .then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+  
+        // Conversion des dimensions du canvas en mm
+        const pxToMm = 25.4 / 96;
+        const imgWidth = canvas.width * pxToMm;
+        const imgHeight = canvas.height * pxToMm;
+        
+        // Calcul du ratio pour l'ajustement à la page
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const newWidth = imgWidth * ratio;
+        const newHeight = imgHeight * ratio;
+        
+        // Centrage de l'image
+        const offsetX = (pdfWidth - newWidth) / 2;
+        const offsetY = (pdfHeight - newHeight) / 2;
+        
+        pdf.addImage(imgData, 'PNG', offsetX, offsetY, newWidth, newHeight);
+        
+        // Ouvre le PDF dans un nouvel onglet
+        const pdfBlobUrl = pdf.output('bloburl');
+        window.open(pdfBlobUrl, '_blank');
+      })
+      .catch((error) => {
+        console.error("html2canvas error:", error);
+        alert("Erreur lors de la génération du PDF. Vérifiez la console pour plus d'informations.");
+      });
+  };
+  
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 pt-5 p-4 sm:p-8">
-      <div className="transform scale-30 md:scale-100 origin-top">
-        <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
-          <BulletinHeader />
-          <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
-          <div className="overflow-x-auto">
-            <BulletinTable 
-              flattenedSubjects={flattenedSubjects}
-              handleSubjectUpdate={handleSubjectUpdate}
-              totals={totals}
-              maxTotals={maxTotals}
-              percentages={percentages}
-              initialGradesMapping={initialGradesMapping}
-              ranking={rankings}
-              gradesMatrix={allGrades}
-            />
-          </div>
-          <BulletinFooter />
-
-          <div className="mt-4 flex items-center">
-              {/* Bouton conditionnel pour les rôles spécifiques */}
-              {(userRole === 'école' || userRole === 'professeur') && (
-                <button
-                  onClick={handleSaveBulletin}
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Sauvegarder le Bulletin
-                </button>
-              )}
-
-              {/* Conteneur aligné à droite */}
-              <div className="ml-auto flex flex-col items-end text-right">
-                {/* QR Code centré horizontalement dans son conteneur */}
-                <div className="flex justify-center w-full">
-                  <QRCode value={qrCodeUrl} size={60} />
-                </div>
-
-                {/* Code de vérification avec texte aligné à droite */}
-                <div className="mt-4 text-gray-600 cursor-pointer">
-                  Code de Vérification: <strong>{selectedStudent.bulletinId}</strong>
-                </div>
-              </div>
-            </div>
-
-          </div>
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4 sm:p-8">
+     
+      {/* Boutons interactifs non exportés (masqués via la classe "no-print") */}
+      <div className="mb-4 flex flex-col sm:flex-row justify-between w-full md:w-auto items-center ml-auto no-print">
+        {(userRole === 'école' || userRole === 'professeur') && (
+          <button
+            onClick={handleSaveBulletin}
+            className="px-4 py-2 bg-blue-500 w-full md:w-auto text-white rounded hover:bg-blue-600"
+          >
+            Sauvegarder le Bulletin
+          </button>
+        )}
+        <button
+          onClick={handleExportPDF}
+          className="mt-2 ml-0 md:ml-4 px-4 py-2 w-full md:w-auto bg-green-500 text-white rounded hover:bg-green-600 flex justify-center items-center"
+        >
+          <FaPrint className="w-4 h-4 mr-2" /> Exporter en PDF
+        </button>
       </div>
+      <div className="transform scale-30 md:scale-100 origin-top">
+      {/* Conteneur exporté en PDF contenant tout le bulletin */}
+      <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8" ref={printRef}>
+        <BulletinHeader />
+        <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
+        <div className="overflow-x-auto">
+          <BulletinTable 
+            flattenedSubjects={flattenedSubjects}
+            handleSubjectUpdate={handleSubjectUpdate}
+            totals={totals}
+            maxTotals={maxTotals}
+            percentages={percentages}
+            initialGradesMapping={initialGradesMapping}
+            ranking={rankings}
+            gradesMatrix={allGrades}
+          />
+        </div>
+        <BulletinFooter />
+        {/* Bloc QR Code et Code de Vérification */}
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex flex-col justify-center mt-3 items-start text-left">
+            <p>(1)Biffer la mention inutile</p>
+            <p>
+              Note importante : Le bulletin est sans valeur s’il est raturé ou surchargé
+            </p>
+          </div>
+          <div className="flex justify-center items-center mb-3">
+            <QRCode value={qrCodeUrl} size={60} />
+          </div>
+          <div className="mt-4 flex flex-col justify-center items-center text-right">
+            <div className="mt-7 text-gray-600">
+              Code de Vérification: <strong>{selectedStudent.bulletinId}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
   );
 };
