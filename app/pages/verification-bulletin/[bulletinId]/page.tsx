@@ -269,9 +269,26 @@ export default function VerificateurBulletin() {
               )}
             </div>
           </form>
-         {bulletin && ( 
-                        <BulletinDisplay bulletin={bulletin} />
- )}
+          {bulletin && (
+                      <>
+                        {/* Version mobile : affichée pour les écrans en dessous de 640px */}
+                        <div className="block sm:hidden overflow-hidden" style={{ width: "360px",  height: "500px" }}>
+                          <div
+                            className="transform origin-top-left"
+                            style={{ width: "1200px", transform: "scale(0.30)" }}
+                          >
+                            <BulletinDisplay bulletin={bulletin} />
+                          </div>
+                        </div>
+                        {/* Version desktop : affichée à partir de 640px */}
+                        <div className="hidden sm:block">
+                          <BulletinDisplay bulletin={bulletin} />
+                        </div>
+                      </>
+                    )}
+
+
+
           <div className="mt-6 md:mt-8 text-center text-xs md:text-sm text-gray-600">
             <p>
               Système officiel de vérification - Toute falsification est passible de
