@@ -257,82 +257,98 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   }), [studentAggregates, selectedStudent]);
 
   // Enregistrement du bulletin dans Firestore
-  const handleSaveBulletin = async () => {
-    try {
-      const bulletinCollectionRef = collection(firestore, "publicBulletins");
-      
-      const flattenedGrades = allGrades.reduce<Record<string, (number | null)[]>>((acc, row, index) => {
-        const subjectName = flattenedSubjects[index]?.name || `subject_${index}`;
-        acc[subjectName] = row.map(val => (val === null || val === undefined) ? null : Number(val));
-        return acc;
-      }, {});
-      
-      const gradesMetadata = {
-        rowCount: allGrades.length,
-        colCount: allGrades[0]?.length || 0
-      };
-      
-      const sanitizedTotals = Object.entries(totals).reduce((acc: Totals, [key, value]) => {
-        (acc as any)[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-        return acc;
-      }, {} as Totals);
-      
-      const sanitizedMaxTotals = Object.entries(maxTotals).reduce((acc, [key, value]) => {
-        acc[key as keyof MaxTotals] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-        return acc;
-      }, {} as MaxTotals);
-      
-      const sanitizedPercentages = Object.entries(percentages).reduce((acc, [key, value]) => {
-        acc[key] = value || "0";
-        return acc;
-      }, {} as Record<string, string>);
-      
-      const sanitizedStudent = {
-        displayName: selectedStudent.displayName || "",
-        sexe: selectedStudent.sexe || "",
-        neEA: selectedStudent.neEA || "",
-        naissance: selectedStudent.naissance || "",
-        classe: selectedStudent.classe || "",
-        section: selectedStudent.section || "",
-        numPerm: selectedStudent.numPerm || "",
-        schoolId: selectedStudent.schoolId || ""
-      };
-      
-      const sanitizedSchool = {
-        province: schoolInfo.province || "",
-        ville: schoolInfo.ville || "",
-        commune: schoolInfo.commune || "",
-        nom: schoolInfo.nom || "",
-        code: schoolInfo.code || ""
-      };
-      
-      const bulletinData = {
-        student: sanitizedStudent,
-        school: sanitizedSchool,
-        grades: flattenedGrades,
-        gradesMetadata: gradesMetadata,
-        totals: sanitizedTotals,
-        maxTotals: sanitizedMaxTotals,
-        percentages: sanitizedPercentages,
-        timestamp: serverTimestamp()
-      };
+// Enregistrement du bulletin dans Firestore
+const handleSaveBulletin = async () => {
+  try {
+    const bulletinCollectionRef = collection(firestore, "publicBulletins");
+    
+    const flattenedGrades = allGrades.reduce<Record<string, (number | null)[]>>((acc, row, index) => {
+      const subjectName = flattenedSubjects[index]?.name || `subject_${index}`;
+      acc[subjectName] = row.map(val => (val === null || val === undefined) ? null : Number(val));
+      return acc;
+    }, {});
+    
+    const gradesMetadata = {
+      rowCount: allGrades.length,
+      colCount: allGrades[0]?.length || 0
+    };
+    
+    const sanitizedTotals = Object.entries(totals).reduce((acc: Totals, [key, value]) => {
+      (acc as any)[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+      return acc;
+    }, {} as Totals);
+    
+    const sanitizedMaxTotals = Object.entries(maxTotals).reduce((acc, [key, value]) => {
+      acc[key as keyof MaxTotals] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+      return acc;
+    }, {} as MaxTotals);
+    
+    const sanitizedPercentages = Object.entries(percentages).reduce((acc, [key, value]) => {
+      acc[key] = value || "0";
+      return acc;
+    }, {} as Record<string, string>);
+    
+    const sanitizedStudent = {
+      displayName: selectedStudent.displayName || "",
+      sexe: selectedStudent.sexe || "",
+      neEA: selectedStudent.neEA || "",
+      naissance: selectedStudent.naissance || "",
+      classe: selectedStudent.classe || "",
+      section: selectedStudent.section || "",
+      numPerm: selectedStudent.numPerm || "",
+      schoolId: selectedStudent.schoolId || ""
+    };
+    
+    const sanitizedSchool = {
+      province: schoolInfo.province || "",
+      ville: schoolInfo.ville || "",
+      commune: schoolInfo.commune || "",
+      nom: schoolInfo.nom || "",
+      code: schoolInfo.code || ""
+    };
 
-      if(selectedStudent.bulletinId) {
-        const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
-        await setDoc(bulletinDocRef, bulletinData, { merge: true });
-        console.log("Bulletin enregistré/mis à jour :", selectedStudent.bulletinId);
-        alert("Bulletin enregistré/mis à jour avec succès !");
-      } else {
-        const docRef = await addDoc(bulletinCollectionRef, bulletinData);
-        setBulletinId(docRef.id);
-        console.log("Document sauvegardé avec ID généré :", docRef.id);
-        alert("Bulletin enregistré avec succès !");
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'enregistrement du bulletin :", error);
-      alert(`Erreur lors de l'enregistrement du bulletin: ${error instanceof Error ? error.message : String(error)}`);
+    // Ajout des informations de ranking pour chaque période et total
+    const bulletinData = {
+      student: sanitizedStudent,
+      school: sanitizedSchool,
+      grades: flattenedGrades,
+      gradesMetadata: gradesMetadata,
+      totals: sanitizedTotals,
+      maxTotals: sanitizedMaxTotals,
+      percentages: sanitizedPercentages,
+      rankings: {
+        firstP: rankings.firstP,    // { rank: ..., total: ... }
+        secondP: rankings.secondP,
+        exam1: rankings.exam1,
+        total1: rankings.total1,
+        thirdP: rankings.thirdP,
+        fourthP: rankings.fourthP,
+        exam2: rankings.exam2,
+        total2: rankings.total2,
+        overall: rankings.overall
+      },
+      anneeScolaire: "2023-2024", // vous pouvez passer cette valeur dynamiquement via props si besoin
+      timestamp: serverTimestamp()
+    };
+
+    if(selectedStudent.bulletinId) {
+      const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
+      await setDoc(bulletinDocRef, bulletinData, { merge: true });
+      console.log("Bulletin enregistré/mis à jour :", selectedStudent.bulletinId);
+      alert("Bulletin enregistré/mis à jour avec succès !");
+    } else {
+      const docRef = await addDoc(bulletinCollectionRef, bulletinData);
+      setBulletinId(docRef.id);
+      console.log("Document sauvegardé avec ID généré :", docRef.id);
+      alert("Bulletin enregistré avec succès !");
     }
-  };
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement du bulletin :", error);
+    alert(`Erreur lors de l'enregistrement du bulletin: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+
 
   // URL du QR code de vérification
   const qrCodeUrl = useMemo(() => {
@@ -385,6 +401,7 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
       });
   };
   
+  
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-4 sm:p-8">
@@ -409,9 +426,12 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
       
        
       </div>
-      <div className="transform scale-30 md:scale-100 origin-top">
+      <div className="m-0 p-0 overflow-hidden transform scale-30 md:scale-100 origin-top">
       {/* Conteneur exporté en PDF contenant tout le bulletin */}
-      <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8" ref={printRef}>
+      <div
+        className="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-2 sm:p-4 md:p-6"
+        ref={printRef}
+      >
         <BulletinHeader />
         <BulletinInfo selectedStudent={selectedStudent} schoolInfo={schoolInfo} />
         <div className="overflow-x-auto">
