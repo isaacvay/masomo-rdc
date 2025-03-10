@@ -273,7 +273,7 @@ export default function VerificateurBulletin() {
           {bulletin && (
             <>
               {/* Version mobile */}
-              <div className="block sm:hidden overflow-hidden" style={{ width: "360px", height: "450px" }}>
+              <div className="block sm:hidden overflow-hidden" style={{ width: "360px", height: "420px" }}>
                 <div
                   className="transform origin-top-left"
                   style={{ width: "1200px", transform: "scale(0.23)" }}
