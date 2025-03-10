@@ -7,9 +7,10 @@ interface BulletinHeaderDisplayProps {
   student: Bulletin["Student"];
   school: Bulletin["school"];
   timestamp: Bulletin["timestamp"];
+  anneeScolaire: string;
 }
 
-const BulletinHeaderDisplay: React.FC<BulletinHeaderDisplayProps> = ({ student, school, timestamp }) => {
+const BulletinHeaderDisplay: React.FC<BulletinHeaderDisplayProps> = ({ student, school, timestamp, anneeScolaire }) => {
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
 
   const formatDate = (dateString: string): string => {
@@ -80,7 +81,7 @@ const BulletinHeaderDisplay: React.FC<BulletinHeaderDisplayProps> = ({ student, 
       <div className="border-t border-black text-center py-2 font-bold">
         <p>
           BULLETIN DE LA {student.classe} ANNÉE {student.section}{" "}
-          ANNÉE SCOLAIRE {startYear}-{endYear}
+          ANNÉE SCOLAIRE {anneeScolaire}
         </p>
       </div>
     </div>
