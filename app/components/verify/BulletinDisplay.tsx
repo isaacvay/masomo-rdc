@@ -15,6 +15,7 @@ interface BulletinDisplayProps {
 }
 
 const BulletinDisplay: React.FC<BulletinDisplayProps> = ({ bulletin }) => (
+  
   <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8">
     <BulletinHeader />
     <BulletinHeaderDisplay
@@ -33,18 +34,27 @@ const BulletinDisplay: React.FC<BulletinDisplayProps> = ({ bulletin }) => (
       />
     </div>
     <BulletinFooter />
-    <div className="ml-auto flex flex-col items-end text-right">
-      <div className="flex flex-col items-center">
-        <QRCode
-          value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
-          size={60}
-        />
-        <div className="mt-4 text-center">
-          Code de vérification : <strong>{bulletin.id}</strong>
-        </div>
-      </div>
-    </div>
-  </div>
+     {/* Bloc QR Code et Code de Vérification */}
+            <div className="flex justify-between items-center mt-4">
+              <div className="flex flex-col justify-center mt-3 items-start text-left">
+                <p>(1)Biffer la mention inutile</p>
+                <p>
+                  Note importante : Le bulletin est sans valeur s’il est raturé ou surchargé
+                </p>
+              </div>
+              <div className="flex justify-center items-center mb-3">
+              <QRCode
+                  value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
+                  size={60}
+                />
+              </div>
+              <div className="mt-4 flex flex-col justify-center items-center text-right">
+                <div className="mt-7 text-gray-600">
+                Code de vérification : <strong>{bulletin.id}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
 );
 
 export default BulletinDisplay;
