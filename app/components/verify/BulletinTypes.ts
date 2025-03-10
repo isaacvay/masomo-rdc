@@ -76,6 +76,7 @@ export interface Subject {
       total2: { rank: number; total: number };
       overall: { rank: number; total: number };
     };
+    anneeScolaire?: string; 
     timestamp: any;
   }
   
