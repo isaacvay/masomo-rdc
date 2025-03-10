@@ -152,7 +152,7 @@ export default function VerificateurBulletin() {
 
   return (
     <div className="min-h-[70vh] bg-gradient-to-br mt-16 md:mt-20 from-blue-50 to-yellow-50 
-                    flex items-start justify-center px-4 md:px-8 pt-4 md:pt-8 overflow-x-hidden">
+                    flex items-start justify-center px-4 md:px-8 pt-4 md:pt-8 overflow-x-hidden mb-2">
       <div className="w-full max-w-7xl bg-white rounded-2xl shadow-xl">
         {/* Header */}
         <header className="px-4 py-4 md:px-8 md:py-6 bg-blue-600 rounded-t-2xl">
