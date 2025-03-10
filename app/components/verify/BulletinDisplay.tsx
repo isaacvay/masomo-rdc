@@ -21,8 +21,9 @@ const BulletinDisplay: React.FC<BulletinDisplayProps> = ({ bulletin }) => (
     <BulletinHeaderDisplay
       student={bulletin.Student}
       school={bulletin.school}
-      timestamp={bulletin.timestamp}
-    />
+      timestamp={bulletin.timestamp} 
+      anneeScolaire={bulletin.anneeScolaire || ""}   
+         />
     <div className="overflow-x-auto">
       <BulletinTableDisplay
         flattenedSubjects={bulletin.flattenedSubjects || []}
