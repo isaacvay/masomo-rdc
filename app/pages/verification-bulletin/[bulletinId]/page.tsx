@@ -51,7 +51,6 @@ export default function VerificateurBulletin() {
               ],
             };
           });
-
           flattenedSubjects = newFlattenedSubjects;
         }
 
@@ -108,6 +107,9 @@ export default function VerificateurBulletin() {
             percentTotal2: "0",
             percentGeneral: "0",
           },
+          // Ajout des informations de classement et de l'année scolaire
+          ranking: data.rankings,
+          anneeScolaire: data.anneeScolaire,
           timestamp: data.timestamp || new Date(),
         };
 
@@ -132,11 +134,11 @@ export default function VerificateurBulletin() {
     if (code.length === 0) setError("");
   }, [code]);
 
-  // Si vous simulez également un scan, vous pouvez déclencher la vérification
+  // Simulation d'un scan de QR code
   const simulateScan = async () => {
     setIsScanning(true);
     setTimeout(async () => {
-      const scannedCode = "KIN2023-456"; // Code simulé à partir du QR code
+      const scannedCode = "KIN2023-456"; // Code simulé
       setCode(scannedCode);
       await fetchBulletin(scannedCode);
       setIsScanning(false);
@@ -148,12 +150,11 @@ export default function VerificateurBulletin() {
     await fetchBulletin(code);
   };
 
-
   return (
     <div className="min-h-[70vh] bg-gradient-to-br mt-16 md:mt-20 from-blue-50 to-yellow-50 
                     flex items-start justify-center px-4 md:px-8 pt-4 md:pt-8 overflow-x-hidden">
       <div className="w-full max-w-7xl bg-white rounded-2xl shadow-xl">
-        {/* Header responsive */}
+        {/* Header */}
         <header className="px-4 py-4 md:px-8 md:py-6 bg-blue-600 rounded-t-2xl">
           <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="bg-white p-2 rounded-lg">
@@ -270,25 +271,22 @@ export default function VerificateurBulletin() {
             </div>
           </form>
           {bulletin && (
-                      <>
-                        {/* Version mobile : affichée pour les écrans en dessous de 640px */}
-                        <div className="block sm:hidden overflow-hidden" style={{ width: "360px",  height: "500px" }}>
-                          <div
-                            className="transform origin-top-left"
-                            style={{ width: "1200px", transform: "scale(0.30)" }}
-                          >
-                            <BulletinDisplay bulletin={bulletin} />
-                          </div>
-                        </div>
-                        {/* Version desktop : affichée à partir de 640px */}
-                        <div className="hidden sm:block">
-                          <BulletinDisplay bulletin={bulletin} />
-                        </div>
-                      </>
-                    )}
-
-
-
+            <>
+              {/* Version mobile */}
+              <div className="block sm:hidden overflow-hidden" style={{ width: "360px", height: "520px" }}>
+                <div
+                  className="transform origin-top-left"
+                  style={{ width: "1200px", transform: "scale(0.30)" }}
+                >
+                  <BulletinDisplay bulletin={bulletin} />
+                </div>
+              </div>
+              {/* Version desktop */}
+              <div className="hidden sm:block">
+                <BulletinDisplay bulletin={bulletin} />
+              </div>
+            </>
+          )}
           <div className="mt-6 md:mt-8 text-center text-xs md:text-sm text-gray-600">
             <p>
               Système officiel de vérification - Toute falsification est passible de
