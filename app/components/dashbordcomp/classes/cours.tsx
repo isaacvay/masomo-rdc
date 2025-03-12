@@ -12,6 +12,8 @@ import {
   where,
 } from "firebase/firestore";
 import { FaArrowLeft } from "react-icons/fa";
+import { CalendarDays } from "lucide-react";
+import Horaire from "./horaire";
 
 interface ProfesseurData {
   displayName: string;
@@ -41,6 +43,7 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
   const [selectedTeachers, setSelectedTeachers] = useState<Record<string, number>>({});
   const [tutorSearchTerm, setTutorSearchTerm] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showHoraire, setShowHoraire] = useState(false);
 
   const currentSubjects = selectedClass
     ? sections
@@ -53,10 +56,10 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
       try {
         const currentUser = auth.currentUser;
         if (!currentUser) throw new Error("Aucun utilisateur connecté");
-        
+
         const userDocRef = doc(firestore, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data() as { schoolId?: string };
           setSchoolId(userData.schoolId || currentUser.uid);
@@ -74,7 +77,7 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
   useEffect(() => {
     const fetchData = async () => {
       if (!schoolId || !selectedClass) return;
-      
+
       try {
         // Récupération des professeurs
         const profQuery = query(
@@ -82,25 +85,25 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
           where("schoolId", "==", schoolId),
           where("role", "in", ["prof", "professeur"])
         );
-        
+
         const profSnapshot = await getDocs(profQuery);
         const professeursData = profSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as (ProfesseurData & { id: string })[];
-        
+
         const teachers = professeursData.map((prof, index) => ({
           id: index + 1,
           name: prof.displayName,
         }));
-        
+
         setProfesseurs(professeursData);
         setTeacherOptions(teachers);
 
         // Chargement des associations existantes
         const associationDocRef = doc(firestore, "schools", schoolId, "associations", selectedClass);
         const associationDoc = await getDoc(associationDocRef);
-        
+
         if (associationDoc.exists()) {
           const existingAssociations = associationDoc.data().associations;
           interface Association {
@@ -112,11 +115,14 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
             [key: string]: number;
           }
 
-          const teachersMap: TeachersMap = (existingAssociations as Association[]).reduce((acc: TeachersMap, curr: Association) => {
-            const teacher = teachers.find(t => t.name === curr.teacher);
-            if (teacher) acc[curr.subject] = teacher.id;
-            return acc;
-          }, {});
+          const teachersMap: TeachersMap = (existingAssociations as Association[]).reduce(
+            (acc: TeachersMap, curr: Association) => {
+              const teacher = teachers.find(t => t.name === curr.teacher);
+              if (teacher) acc[curr.subject] = teacher.id;
+              return acc;
+            },
+            {}
+          );
           setSelectedTeachers(teachersMap);
         }
 
@@ -133,15 +139,14 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
         const assignedTeachers = titulairesData
           .filter(t => t.classe !== selectedClass)
           .map(t => t.professeur);
-          
+
         const availableTitulaires = teachers.filter(
           t => t.name === tutorName || !assignedTeachers.includes(t.name)
         );
-        
+
         setTitulaireOptions(availableTitulaires);
         setSelectedTutor(availableTitulaires[0]?.id || 0);
         setTutorSearchTerm(tutorName || "");
-
       } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
       } finally {
@@ -235,21 +240,36 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
     );
   }
 
+  // Si showHoraire est activé, on affiche uniquement la page Horaire
+  if (showHoraire) {
+    return <Horaire selectedClass={selectedClass} onRetour={() => setShowHoraire(false)} />;
+  }
+
   return (
-    <div>
-    <div className="max-w-4xl mx-auto  mt-5 p-4 bg-white rounded-lg shadow-lg space-y-8">
-       <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                      onClick={onRetour }
-                      aria-label="Retour à la page précédente"
-                    >
-                      <FaArrowLeft className="shrink-0" />
-                      <span>Retour</span>
-                    </button>
+    <div className="max-w-4xl mx-auto mt-5 p-4 bg-white rounded-lg shadow-lg space-y-8">
+      <div className="flex justify-between items-center">
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+          onClick={onRetour}
+          aria-label="Retour à la page précédente"
+        >
+          <FaArrowLeft className="shrink-0" />
+          <span>Retour</span>
+        </button>
+        <button
+          className="flex py-2 px-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md"
+          onClick={() => setShowHoraire(true)}
+        >
+          <CalendarDays className="mr-2" />
+          <span>Horaire</span>
+        </button>
+      </div>
+
       {/* Section Titulaire */}
       <div className="p-6 bg-indigo-50 rounded-lg">
-        <h3 className="text-xl font-semibold mb-4 text-indigo-700">Titulaire de la classe de {selectedClass}</h3>
-        
+        <h3 className="text-xl font-semibold mb-4 text-indigo-700">
+          Titulaire de la classe de {selectedClass}
+        </h3>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-grow">
             <input
@@ -273,7 +293,6 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
               </div>
             )}
           </div>
-          
           <button
             onClick={setTitulaire}
             className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200"
@@ -281,9 +300,8 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
             Définir comme titulaire
           </button>
         </div>
-        
         {currentTutor && (
-          <div className="mt-4 text-indigo-700 ">
+          <div className="mt-4 text-indigo-700">
             Titulaire actuel : <strong className="uppercase">{currentTutor}</strong>
           </div>
         )}
@@ -295,7 +313,6 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
           const eligibleTeachers = findTeachersForCourse(subject.name);
           const selectedTeacherId = selectedTeachers[subject.name];
           const selectedTeacher = teacherOptions.find(t => t.id === selectedTeacherId);
-          
           return (
             <div key={subject.name} className="p-4 bg-white border border-gray-100 rounded-lg shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -307,14 +324,12 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
                   )}
                   <h4 className="text-lg font-medium">{subject.name}</h4>
                 </div>
-                
                 {selectedTeacher && (
-                  <div className="text-sm text-gray-600 ">
+                  <div className="text-sm text-gray-600">
                     Enseignant : <strong className="uppercase">{selectedTeacher.name}</strong>
                   </div>
                 )}
               </div>
-
               <select
                 value={selectedTeacherId || ''}
                 onChange={(e) => handleTeacherChange(subject.name, e)}
@@ -347,7 +362,6 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
           Annuler
         </button>
       </div>
-    </div>
     </div>
   );
 }
