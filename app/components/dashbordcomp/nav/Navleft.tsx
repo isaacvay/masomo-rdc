@@ -14,7 +14,8 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { Briefcase, UserCircleIcon } from "lucide-react";
+import { Briefcase, CalendarDays, UserCircleIcon } from "lucide-react";
+import { Caladea } from "next/font/google";
 
 interface NavleftProps {
   onPageChange: (page: string) => void;
@@ -41,11 +42,13 @@ const mainNavItems: NavItemData[] = [
 
 const teacherNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
+  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireProf" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
 ];
 
 const studentNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Bulletin", page: "bulletin" },
+  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireEleve" },
   { icon: <Briefcase className="h-6 w-6" />, label: "Cours", page: "cours" },
 ];
 
