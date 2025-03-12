@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-     "@react-pdf/renderer": "^4.3.0",
+    "@react-pdf/renderer": "^4.3.0",
     "@supabase/supabase-js": "^2.48.1",
     "@types/firebase": "^3.2.3",
+    "chroma-js": "^3.1.2",
     "firebase": "^11.3.1",
     "framer-motion": "^12.4.7",
-     "html2canvas": "^1.4.1",
+    "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.3",
     "jspdf": "^3.0.0",
     "lucide-react": "^0.475.0",
@@ -28,6 +29,7 @@
     "react-select": "^5.10.1",
     "react-slick": "^0.30.3",
     "react-to-print": "^3.0.5",
+    "react-toastify": "^11.0.5",
     "slick-carousel": "^1.8.1"
   },
   "devDependencies": {
