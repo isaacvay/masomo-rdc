@@ -16,6 +16,8 @@ import BulletinEleve from "../components/dashbordcomp/bulletin/BulletinEleve";
 import ListeDesCours from "../components/dashbordcomp/prof/listeDesCours";
 import EleveListeDesCours from "../components/dashbordcomp/eleve/EleveListeDesCours";
 import Cours from "../components/dashbordcomp/classes/cours";
+import HoraireDeLEleve from "../components/dashbordcomp/eleve/horaireDeLEleve";
+import HoraireProf from "../components/dashbordcomp/prof/horaireProf";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
@@ -75,6 +77,12 @@ export default function DashboardFullScreen() {
     case "bulletin":
       content = <BulletinEleve />;
       break;
+         case "horaireProf":
+              content = <HoraireProf/>;
+              break;
+              case "horaireEleve":
+                content = <HoraireDeLEleve />;
+                break;
     case "listeprof":
       content = <ListeDesProfs />;
       break;
