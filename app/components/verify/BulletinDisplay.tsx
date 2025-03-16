@@ -45,7 +45,7 @@ const BulletinDisplay: React.FC<BulletinDisplayProps> = ({ bulletin }) => (
               </div>
               <div className="flex justify-center items-center mb-3">
               <QRCode
-                  value={`https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${bulletin.id}`}
+                  value={`https://www.masomordc.com/pages/verification-bulletin?bulletinId=${bulletin.id}`}
                   size={60}
                 />
               </div>
