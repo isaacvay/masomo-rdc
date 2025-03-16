@@ -11,10 +11,13 @@ interface Student {
   classe: string;
   schoolId: string;
   role: string;
+
 }
 
 interface ListeClassesProps {
   onClassSelect: (className: string) => void;
+
+
 }
 
 // Fonction pour regrouper les sections par catégorie
@@ -33,7 +36,7 @@ const groupByCategory = (sections: Section[]) => {
   return Object.values(grouped);
 };
 
-export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
+export default function ListeClasses({ onClassSelect,}: ListeClassesProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +75,6 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
         );
         const snapshot = await getDocs(q);
         const data: Student[] = snapshot.docs.map((doc) => doc.data() as Student);
-        console.log("Données élèves :", data);
         setStudents(data);
       } catch (err) {
         setError((err as Error).message);
@@ -115,6 +117,7 @@ export default function ListeClasses({ onClassSelect }: ListeClassesProps) {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
