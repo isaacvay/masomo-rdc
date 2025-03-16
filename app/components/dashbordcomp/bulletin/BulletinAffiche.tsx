@@ -352,7 +352,7 @@ const handleSaveBulletin = async () => {
 
   // URL du QR code de vérification
   const qrCodeUrl = useMemo(() => {
-    return `https://masomo-rdc.vercel.app/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
+    return `https://www.masomordc.com/pages/verification-bulletin?bulletinId=${selectedStudent.bulletinId || ''}`;
   }, [selectedStudent.bulletinId]);
 
   // Export en PDF
