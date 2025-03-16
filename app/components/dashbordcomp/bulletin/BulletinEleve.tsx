@@ -39,14 +39,12 @@ export default function BulletinEleve() {
     const fetchData = async () => {
       try {
         if (!auth.currentUser) throw new Error("Aucun utilisateur connecté");
-        console.log("Utilisateur connecté :", auth.currentUser.uid);
 
         // Récupérer le profil étudiant depuis "users"
         const userRef = doc(firestore, "users", auth.currentUser.uid);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) throw new Error("Utilisateur non trouvé");
         const userData = userSnap.data() as Student;
-        console.log("Données utilisateur :", userData);
         if (!userData.schoolId) throw new Error("Aucune école associée à cet utilisateur");
 
         setStudent(userData);
@@ -56,7 +54,6 @@ export default function BulletinEleve() {
         const schoolSnap = await getDoc(schoolRef);
         if (!schoolSnap.exists()) throw new Error("École non trouvée");
         const schoolData = schoolSnap.data() as SchoolInfo;
-        console.log("Données école :", schoolData);
         setSchool(schoolData);
       } catch (err: any) {
         console.error("Erreur Firestore :", err.message);
