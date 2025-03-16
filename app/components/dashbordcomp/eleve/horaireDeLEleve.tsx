@@ -1,175 +1,171 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { auth, firestore } from "@/config/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { FaSpinner, FaRegCalendarAlt } from "react-icons/fa";
+import { FaSpinner, FaRegCalendarAlt, FaPause } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 
-interface ScheduleDay {
-  [time: string]: string;
-}
-
-interface ScheduleData {
-  [day: string]: ScheduleDay;
-}
-
-interface UserData {
-  schoolId: string;
-  classe: string;
-  role: string;
-}
-
-interface Slot {
+// Interfaces et types
+type TimeSlot = {
   start: string;
   end: string;
   isBreak?: boolean;
-}
+};
 
-export default function HoraireDeLEleve() {
+type ScheduleData = Record<string, Record<string, string>>;
+type SchoolBlock = { start: string; breakStart: string; breakEnd: string; end: string };
+
+// Constantes
+const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const LESSON_DURATION = 45;
+const TIME_BLOCKS = {
+  morning: { start: "07:30", breakStart: "09:15", breakEnd: "10:00", end: "12:15" },
+  afternoon: { start: "12:30", breakStart: "15:00", breakEnd: "15:15", end: "17:30" }
+};
+
+// Utilitaires
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const fromMinutes = (mins: number): string => {
+  return `${Math.floor(mins / 60).toString().padStart(2, '0')}:${(mins % 60).toString().padStart(2, '0')}`;
+};
+
+const generateSlots = (block: SchoolBlock): TimeSlot[] => {
+  let current = toMinutes(block.start);
+  const slots: TimeSlot[] = [];
+
+  // Créneaux avant la pause
+  for (let i = 0; i < 3; i++) {
+    slots.push({ start: fromMinutes(current), end: fromMinutes(current + LESSON_DURATION) });
+    current += LESSON_DURATION;
+  }
+
+  // Pause
+  slots.push({ 
+    start: block.breakStart, 
+    end: block.breakEnd, 
+    isBreak: true 
+  });
+
+  current = toMinutes(block.breakEnd);
+  
+  // Créneaux après la pause
+  for (let i = 0; i < 3; i++) {
+    slots.push({ start: fromMinutes(current), end: fromMinutes(current + LESSON_DURATION) });
+    current += LESSON_DURATION;
+  }
+
+  return slots;
+};
+
+export default function StudentSchedule() {
   const [schedule, setSchedule] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activePeriod, setActivePeriod] = useState<keyof typeof TIME_BLOCKS>('morning');
   const router = useRouter();
-  const lessonDuration = 45;
 
-  const toMinutes = (time: string): number => {
-    const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
-  };
+  // Mémoïsation des créneaux horaires
+  const timeSlots = useMemo(() => ({
+    morning: generateSlots(TIME_BLOCKS.morning),
+    afternoon: generateSlots(TIME_BLOCKS.afternoon)
+  }), []);
 
-  const fromMinutes = (mins: number): string => {
-    const hours = Math.floor(mins / 60);
-    const minutes = mins % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-  };
+  // Récupération des données
+  const fetchSchedule = useCallback(async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Authentication required");
+      
+      const [userDoc, scheduleDoc] = await Promise.all([
+        getDoc(doc(firestore, "users", user.uid)),
+        (async () => {
+          const userData = (await getDoc(doc(firestore, "users", user.uid))).data();
+          if (!userData || userData.role !== "élève") throw new Error("Unauthorized access");
+          if (!userData.schoolId || !userData.classe) throw new Error("Missing school information");
+          
+          return getDoc(doc(firestore, "schools", userData.schoolId, "horaires", userData.classe));
+        })()
+      ]);
 
-  const generateSlotsForBlock = (block: {
-    start: string;
-    breakStart: string;
-    breakEnd: string;
-    end: string;
-  }): Slot[] => {
-    const slots: Slot[] = [];
-    let current = toMinutes(block.start);
-    
-    for (let i = 0; i < 3; i++) {
-      slots.push({
-        start: fromMinutes(current),
-        end: fromMinutes(current + lessonDuration),
-      });
-      current += lessonDuration;
+      if (!scheduleDoc.exists()) throw new Error("Schedule not found");
+      setSchedule(scheduleDoc.data().schedule);
+    } catch (err: any) {
+      setError(err.message || "Error loading schedule");
+      setTimeout(() => router.push('/login'), 3000);
+    } finally {
+      setLoading(false);
     }
-    
-    slots.push({ start: block.breakStart, end: block.breakEnd, isBreak: true });
-    
-    current = toMinutes(block.breakEnd);
-    for (let i = 0; i < 3; i++) {
-      slots.push({
-        start: fromMinutes(current),
-        end: fromMinutes(current + lessonDuration),
-      });
-      current += lessonDuration;
-    }
-    
-    return slots;
-  };
-
-  const morningBlock = {
-    start: "07:30",
-    breakStart: "09:15",
-    breakEnd: "10:00",
-    end: "12:15",
-  };
-
-  const afternoonBlock = {
-    start: "12:30",
-    breakStart: "15:00",
-    breakEnd: "15:15",
-    end: "17:30",
-  };
-
-  const morningSlots = generateSlotsForBlock(morningBlock);
-  const afternoonSlots = generateSlotsForBlock(afternoonBlock);
-  const [showMorning, setShowMorning] = useState<boolean>(true);
+  }, [router]);
 
   useEffect(() => {
-    const fetchSchedule = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          setError("Utilisateur non connecté");
-          return;
-        }
-
-        const userDocRef = doc(firestore, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (!userDoc.exists()) throw new Error("Utilisateur introuvable");
-        
-        const userData = userDoc.data() as UserData;
-        if (userData.role !== "élève") throw new Error("Accès réservé aux élèves");
-        
-        const { schoolId, classe } = userData;
-        if (!schoolId || !classe) throw new Error("Informations de classe incomplètes");
-        
-        const scheduleRef = doc(firestore, "schools", schoolId, "horaires", classe);
-        const scheduleDoc = await getDoc(scheduleRef);
-        
-        if (!scheduleDoc.exists()) throw new Error("Horaire non trouvé");
-        
-        const rawSchedule = scheduleDoc.data().schedule as ScheduleData;
-        setSchedule(rawSchedule);
-      } catch (err: any) {
-        setError(err.message || "Erreur lors du chargement de l'horaire");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+    const abortController = new AbortController();
     fetchSchedule();
-  }, []);
+    return () => abortController.abort();
+  }, [fetchSchedule]);
 
-  const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  // Rendering conditionnel
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <FaSpinner className="animate-spin text-blue-600 text-4xl mx-auto" />
+          <h3 className="text-xl font-semibold text-gray-800">Chargement en cours...</h3>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="max-w-md bg-red-50 rounded-xl p-6 ring-1 ring-red-100">
+          <div className="flex gap-3">
+            <div className="shrink-0 text-red-600">
+              <FaSpinner className="animate-spin w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-red-800">Erreur</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden ring-1 ring-black ring-opacity-5">
+      <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5">
         {/* En-tête */}
-        <div className="p-8 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <div className="flex items-center space-x-4">
+        <header className="p-8 bg-gradient-to-r from-blue-600 to-indigo-600">
+          <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl">
               <FaRegCalendarAlt className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Emploi du temps</h1>
-              <p className="text-blue-100 mt-1">Visualisation de votre programme hebdomadaire</p>
+              <h1 className="text-3xl font-bold text-white">Mon Horaire</h1>
+              <p className="text-blue-100 mt-1">Programme hebdomadaire</p>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Contrôles */}
+        {/* Contrôles période */}
         <div className="flex justify-center gap-4 my-8 px-4">
-          {[true, false].map((isMorning) => (
+          {Object.entries(TIME_BLOCKS).map(([period, block]) => (
             <button
-              key={String(isMorning)}
-              onClick={() => setShowMorning(isMorning)}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-                showMorning === isMorning
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "bg-white text-gray-600 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+              key={period}
+              onClick={() => setActivePeriod(period as keyof typeof TIME_BLOCKS)}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                activePeriod === period
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-600 hover:shadow-md"
               }`}
             >
-              {isMorning ? (
-                <>
-                  <span>🌞 Matin</span>
-                  <span className="hidden sm:inline">{morningBlock.start} - {morningBlock.end}</span>
-                </>
-              ) : (
-                <>
-                  <span>🌙 Après-midi</span>
-                  <span className="hidden sm:inline">{afternoonBlock.start} - {afternoonBlock.end}</span>
-                </>
-              )}
+              {period === 'morning' ? '🌞 Matin' : '🌙 Après-midi'}
             </button>
           ))}
         </div>
@@ -180,46 +176,41 @@ export default function HoraireDeLEleve() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="sticky left-0 z-20 pl-8 pr-6 py-5 bg-gray-50 text-left text-sm font-semibold text-gray-700">
+                  <th className="sticky left-0 pl-8 pr-6 py-5 bg-blue-500 text-white text-left text-sm font-semibold ">
                     Horaire
-                  </th>
-                  {days.map((day) => (
-                    <th
-                      key={day}
-                      className="px-4 py-5 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider"
-                    >
-                      <span className="hidden lg:inline">{day}</span>
-                      <span className="lg:hidden">{day.slice(0, 3)}</span>
+                  </th> 
+                  {DAYS.map(day => (
+                    <th key={day} className="px-4 py-5 text-center text-sm font-semibold bg-blue-500 text-white">
+                      {day}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {(showMorning ? morningSlots : afternoonSlots).map((slot, idx) => (
+                {timeSlots[activePeriod].map((slot, idx) => (
                   <tr
                     key={idx}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      slot.isBreak ? 'bg-blue-50 hover:bg-blue-100' : ''
-                    }`}
+                    className={`hover:bg-gray-50 ${slot.isBreak ? 'bg-blue-50' : ''}`}
                   >
-                    <td className="sticky left-0 z-10 pl-8 pr-6 py-4 bg-white font-medium text-gray-900 whitespace-nowrap border-r border-gray-100">
+                    <td className="sticky left-0 pl-8 pr-6 py-4 bg-white font-medium text-gray-900 border-r border-gray-100">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${slot.isBreak ? 'bg-orange-500' : 'bg-blue-500'}`} />
+                        {slot.isBreak ? (
+                          <FaPause className="text-orange-500" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
                         {slot.start} - {slot.end}
-                        {slot.isBreak && <span className="ml-2 text-orange-600">⏸️ Pause</span>}
                       </div>
                     </td>
-                    {days.map((day) => (
-                      <td key={day} className="px-4 py-4 text-center">
-                        <div className="text-gray-700 font-medium">
-                          {schedule?.[day]?.[slot.start] ? (
-                            <span className="inline-block px-3 py-1 bg-blue-100 rounded-full text-blue-800">
-                              {schedule[day][slot.start]}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 italic">-</span>
-                          )}
-                        </div>
+                    {DAYS.map(day => (
+                      <td key={day} className="px-4 py-4 text-center ">
+                        {schedule?.[day]?.[slot.start] ? (
+                          <span className="inline-block px-3 py-2 font-semibold text-black">
+                            {schedule[day][slot.start]}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -229,42 +220,6 @@ export default function HoraireDeLEleve() {
           </div>
         </div>
       </div>
-
-      {/* États de chargement */}
-      {loading && (
-        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <FaSpinner className="animate-spin text-blue-600 text-4xl mx-auto" />
-            <h3 className="text-xl font-semibold text-gray-800">Chargement de l'emploi du temps</h3>
-            <p className="text-gray-600">Veuillez patienter...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Gestion des erreurs */}
-      {error && (
-        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md bg-red-50 rounded-xl p-6 ring-1 ring-red-100">
-            <div className="flex gap-3">
-              <div className="shrink-0">
-                <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24">
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-red-800">Erreur de chargement</h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
