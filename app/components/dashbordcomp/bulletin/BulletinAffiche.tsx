@@ -167,7 +167,6 @@ const BulletinAffiche: React.FC<BulletinAfficheProps> = ({ selectedStudent, scho
   useEffect(() => {
     async function fetchGrades() {
       if (!selectedStudent.schoolId) {
-        console.log("schoolId non défini, attente...");
         return;
       }
       try {
@@ -334,12 +333,10 @@ const handleSaveBulletin = async () => {
     if(selectedStudent.bulletinId) {
       const bulletinDocRef = doc(firestore, "publicBulletins", selectedStudent.bulletinId);
       await setDoc(bulletinDocRef, bulletinData, { merge: true });
-      console.log("Bulletin enregistré/mis à jour :", selectedStudent.bulletinId);
       alert("Bulletin enregistré/mis à jour avec succès !");
     } else {
       const docRef = await addDoc(bulletinCollectionRef, bulletinData);
       setBulletinId(docRef.id);
-      console.log("Document sauvegardé avec ID généré :", docRef.id);
       alert("Bulletin enregistré avec succès !");
     }
   } catch (error) {
