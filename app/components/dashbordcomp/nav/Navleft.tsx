@@ -44,12 +44,14 @@ const teacherNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
   { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireProf" },
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
+  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire des exam", page: "HorairedesexamensProf" },
 ];
 
 const studentNavItems: NavItemData[] = [
   { icon: <BookOpenIcon className="h-6 w-6" />, label: "Bulletin", page: "bulletin" },
   { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireEleve" },
   { icon: <Briefcase className="h-6 w-6" />, label: "Cours", page: "cours" },
+  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire des exam", page: "HorairedesexamensEleve" },
 ];
 
 const titulaireNavItems: NavItemData[] = [
