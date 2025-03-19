@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import { FaArrowLeft, FaCheckCircle } from "react-icons/fa";
+import React, { useState, useEffect, useMemo, JSX } from "react";
+import { FaArrowLeft, FaCheckCircle, FaClock, FaSun, FaMoon } from "react-icons/fa";
 import { auth, firestore } from "@/config/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { sections } from "@/data/cours";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -18,21 +18,34 @@ interface Slot {
   isBreak?: boolean;
 }
 
+interface Block {
+  start: string;
+  breakStart: string;
+  breakEnd: string;
+  end: string;
+  label: string;
+  icon: JSX.Element;
+}
+
+type ScheduleType = "RD" | "Custom";
+
 export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [scheduleData, setScheduleData] = useState<
     Record<string, Record<string, string>>
   >({});
-  const [scheduleType, setScheduleType] = useState<"RD">("RD");
+  const [scheduleType, setScheduleType] = useState<ScheduleType>("RD");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  // Nouvel état pour sélectionner le bloc : 0 pour Matin, 1 pour Après‑midi
   const [currentBlockIndex, setCurrentBlockIndex] = useState<number>(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const lessonDuration = 45; // durée d'un cours en minutes
+  const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
-  // Configuration RD avec deux blocs distincts
-  const scheduleConfig = useMemo(
+  // Configuration améliorée avec possibilité d'étendre à d'autres types d'horaires
+  const scheduleConfig: Record<ScheduleType, { blocks: Block[]; label: string }> = useMemo(
     () => ({
       RD: {
         blocks: [
@@ -41,40 +54,44 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
             breakStart: "09:45",
             breakEnd: "10:00",
             end: "12:15",
+            label: "Matin",
+            icon: <FaSun className="mr-2" />
           },
           {
             start: "12:30",
-            breakStart: "15:15",
-            breakEnd: "15:30",
-            end: "17:45",
+            breakStart: "15:00",
+            breakEnd: "15:15",
+            end: "17:30",
+            label: "Après-midi",
+            icon: <FaMoon className="mr-2" />
           },
         ],
         label: "Horaire RD",
+      },
+      Custom: {
+        blocks: [],
+        label: "Horaire Custom",
       },
     }),
     []
   );
 
   // Fonctions utilitaires pour convertir les heures en minutes et inversement
-  const toMinutes = (time: string) => {
+  const toMinutes = (time: string): number => {
     const [h, m] = time.split(":").map(Number);
     return h * 60 + m;
   };
 
-  const fromMinutes = (mins: number) =>
+  const fromMinutes = (mins: number): string =>
     `${Math.floor(mins / 60)
       .toString()
       .padStart(2, "0")}:${(mins % 60).toString().padStart(2, "0")}`;
 
-  // Génère pour un bloc exactement 3 cours avant la récréation, insère la récréation, puis 3 cours après.
-  const generateSlotsForBlock = (block: {
-    start: string;
-    breakStart: string;
-    breakEnd: string;
-    end: string;
-  }): Slot[] => {
+  // Génère pour un bloc exactement 3 cours avant la récréation, insère la récréation, puis 3 cours après
+  const generateSlotsForBlock = (block: Block): Slot[] => {
     const slots: Slot[] = [];
     let current = toMinutes(block.start);
+    
     // 3 cours avant la récréation
     for (let i = 0; i < 3; i++) {
       slots.push({
@@ -83,8 +100,14 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
       });
       current += lessonDuration;
     }
+    
     // Créneau récréation
-    slots.push({ start: block.breakStart, end: block.breakEnd, isBreak: true });
+    slots.push({ 
+      start: block.breakStart, 
+      end: block.breakEnd, 
+      isBreak: true 
+    });
+    
     // 3 cours après la récréation
     current = toMinutes(block.breakEnd);
     for (let i = 0; i < 3; i++) {
@@ -94,10 +117,11 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
       });
       current += lessonDuration;
     }
+    
     return slots;
   };
 
-  // On génère uniquement les créneaux du bloc sélectionné (Matin ou Après‑midi)
+  // On génère uniquement les créneaux du bloc sélectionné (Matin ou Après-midi)
   const timeSlots = useMemo(() => {
     const block = scheduleConfig[scheduleType].blocks[currentBlockIndex];
     return generateSlotsForBlock(block);
@@ -113,6 +137,7 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
     [selectedClass]
   );
 
+  // Récupérer l'ID de l'école depuis Firestore
   useEffect(() => {
     const fetchSchoolId = async () => {
       try {
@@ -121,7 +146,16 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
 
         const userDoc = await getDoc(doc(firestore, "users", user.uid));
         const userData = (userDoc.data() as { schoolId?: string }) || {};
-        setSchoolId(userData.schoolId || user.uid);
+        
+        if (userData.schoolId) {
+          setSchoolId(userData.schoolId);
+        } else {
+          setSchoolId(user.uid);
+          console.warn("School ID not found, using user ID as fallback");
+        }
+        
+        // Essayer de récupérer l'horaire existant
+        await fetchExistingSchedule(userData.schoolId || user.uid);
       } catch (error) {
         console.error("Error fetching school ID:", error);
         toast.error("Erreur lors de la récupération des informations");
@@ -131,26 +165,53 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
     };
 
     fetchSchoolId();
-  }, []);
+  }, [selectedClass]);
 
-  useEffect(() => {
-    const initializeSchedule = () => {
-      const initialSchedule: Record<string, Record<string, string>> = {};
-      const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  // Récupérer l'horaire existant s'il existe
+  const fetchExistingSchedule = async (schoolIdentifier: string) => {
+    try {
+      const scheduleRef = doc(
+        firestore,
+        "schools",
+        schoolIdentifier,
+        "horaires",
+        selectedClass
+      );
+      
+      const scheduleDoc = await getDoc(scheduleRef);
+      
+      if (scheduleDoc.exists()) {
+        const data = scheduleDoc.data();
+        setScheduleData(data.schedule || {});
+        setLastSaved(data.updatedAt?.toDate() || null);
+        toast.info("Horaire existant chargé");
+      } else {
+        initializeSchedule();
+      }
+    } catch (error) {
+      console.error("Error fetching existing schedule:", error);
+      initializeSchedule();
+    }
+  };
 
-      days.forEach((day) => {
-        initialSchedule[day] = {};
-        timeSlots.forEach((slot) => {
+  // Initialiser un nouvel horaire vide
+  const initializeSchedule = () => {
+    const initialSchedule: Record<string, Record<string, string>> = {};
+    
+    days.forEach((day) => {
+      initialSchedule[day] = {};
+      scheduleConfig.RD.blocks.forEach((block) => {
+        const slots = generateSlotsForBlock(block);
+        slots.forEach((slot) => {
           initialSchedule[day][slot.start] = "";
         });
       });
+    });
 
-      setScheduleData(initialSchedule);
-    };
+    setScheduleData(initialSchedule);
+  };
 
-    if (!isLoading) initializeSchedule();
-  }, [timeSlots, isLoading]);
-
+  // Gère les changements dans les sélections d'horaires
   const handleScheduleChange = (day: string, time: string, value: string) => {
     setScheduleData((prev) => ({
       ...prev,
@@ -159,8 +220,42 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
         [time]: value,
       },
     }));
+    setHasUnsavedChanges(true);
   };
 
+  // Copier un jour vers tous les autres
+  const copyDayToAll = (sourceDay: string) => {
+    if (!confirm(`Copier l'horaire du ${sourceDay} vers tous les jours?`)) return;
+    
+    const updatedSchedule = { ...scheduleData };
+    
+    days.forEach((day) => {
+      if (day !== sourceDay) {
+        updatedSchedule[day] = { ...updatedSchedule[sourceDay] };
+      }
+    });
+    
+    setScheduleData(updatedSchedule);
+    setHasUnsavedChanges(true);
+    toast.info(`Horaire du ${sourceDay} copié vers tous les jours`);
+  };
+
+  // Effacer un jour
+  const clearDay = (day: string) => {
+    if (!confirm(`Effacer l'horaire du ${day}?`)) return;
+    
+    const updatedSchedule = { ...scheduleData };
+    
+    Object.keys(updatedSchedule[day] || {}).forEach((timeKey) => {
+      updatedSchedule[day][timeKey] = "";
+    });
+    
+    setScheduleData(updatedSchedule);
+    setHasUnsavedChanges(true);
+    toast.info(`Horaire du ${day} effacé`);
+  };
+
+  // Sauvegarder l'horaire dans Firestore
   const saveSchedule = async () => {
     if (!schoolId) return toast.error("Identifiant d'école non disponible");
     setIsSaving(true);
@@ -173,16 +268,22 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
         "horaires",
         selectedClass
       );
+      
+      const currentTime = new Date();
+      
       await setDoc(
         scheduleRef,
         {
           classe: selectedClass,
           schedule: scheduleData,
-          updatedAt: new Date(),
+          updatedAt: currentTime,
+          updatedBy: auth.currentUser?.uid || "unknown",
         },
         { merge: true }
       );
 
+      setLastSaved(currentTime);
+      setHasUnsavedChanges(false);
       toast.success("Horaire sauvegardé avec succès !");
     } catch (error) {
       console.error("Save error:", error);
@@ -192,19 +293,28 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
     }
   };
 
-  if (isLoading)
+  // Exporter l'horaire en PDF (fonction de base, à compléter avec une librairie comme jsPDF)
+  const exportSchedule = () => {
+    toast.info("Fonctionnalité d'export à implémenter");
+    // À implémenter avec une bibliothèque d'export PDF/Excel
+  };
+
+  // Afficher l'indicateur de chargement
+  if (isLoading) {
     return (
-      <div className="p-6 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="p-6 flex flex-col justify-center items-center h-64 bg-white rounded-3xl shadow-lg">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+        <p className="text-blue-600 font-medium">Chargement de l'horaire...</p>
       </div>
     );
+  }
 
   return (
-    <div className="p-6 bg-gradient-to-b from-blue-50 to-white rounded-3xl shadow-2xl max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center mb-10 space-x-6">
+    <div className="p-6 bg-gradient-to-b mt-5 from-blue-50 to-white rounded-3xl shadow-2xl max-w-7xl mx-auto">
+      {/* Header avec actions */}
+      <div className="flex flex-wrap items-center mb-8 gap-4">
         <button
-          className="p-4 bg-blue-100 hover:bg-blue-200 rounded-full transition-transform hover:scale-105"
+          className="p-4 bg-blue-100 hover:bg-blue-200 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-300"
           onClick={onRetour}
           aria-label="Retour"
         >
@@ -212,114 +322,195 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
         </button>
 
         <div className="flex-1">
-          <h2 className="text-3xl font-bold text-blue-800 tracking-wide">
-            📅 Horaire - {selectedClass.toUpperCase()}
+          <h2 className="text-3xl font-bold text-blue-800 tracking-wide flex items-center">
+            <span className="mr-3">📅</span> 
+            Horaire - {selectedClass.toUpperCase()}
           </h2>
-          <p className="text-sm text-blue-600 mt-1 flex items-center">
-            <FaCheckCircle className="mr-2" />
-            Plage horaire (
-            {currentBlockIndex === 0 ? "Matin" : "Après‑midi"}
-            ):{" "}
-            <span className="font-semibold ml-1">
-              {scheduleConfig[scheduleType].blocks[currentBlockIndex].start} →{" "}
-              {scheduleConfig[scheduleType].blocks[currentBlockIndex].end}
-            </span>
-          </p>
+          
+          <div className="flex flex-wrap items-center mt-2 text-sm text-blue-600">
+            <div className="flex items-center mr-6">
+              <FaClock className="mr-2" />
+              <span>
+                {scheduleConfig[scheduleType].blocks[currentBlockIndex].label}:{" "}
+                <span className="font-semibold">
+                  {scheduleConfig[scheduleType].blocks[currentBlockIndex].start} →{" "}
+                  {scheduleConfig[scheduleType].blocks[currentBlockIndex].end}
+                </span>
+              </span>
+            </div>
+            
+            {lastSaved && (
+              <div className="text-gray-500 text-xs">
+                Dernière sauvegarde: {lastSaved.toLocaleString()}
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Bouton de sauvegarde positionné dans le header */}
+        <button
+          className={`px-6 py-3 rounded-xl transition-all transform hover:scale-105 
+                    flex items-center space-x-2 shadow-md ${
+                      hasUnsavedChanges 
+                        ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white animate-pulse" 
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+          onClick={saveSchedule}
+          disabled={isSaving || !hasUnsavedChanges}
+        >
+          {isSaving ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Enregistrement...</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <FaCheckCircle size={18} />
+              <span>Enregistrer</span>
+            </div>
+          )}
+        </button>
       </div>
 
-      {/* Boutons de sélection pour Matin / Après‑midi */}
-      <div className="flex justify-center space-x-4 mb-6">
-        <button
-          onClick={() => setCurrentBlockIndex(0)}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            currentBlockIndex === 0
-              ? "bg-blue-600 text-white shadow-lg"
-              : "bg-white text-blue-600 border border-blue-100 hover:bg-blue-50"
-          }`}
-        >
-          Matin
-        </button>
-        <button
-          onClick={() => setCurrentBlockIndex(1)}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            currentBlockIndex === 1
-              ? "bg-blue-600 text-white shadow-lg"
-              : "bg-white text-blue-600 border border-blue-100 hover:bg-blue-50"
-          }`}
-        >
-          Après‑midi
-        </button>
+      {/* Boutons de sélection pour Matin / Après-midi */}
+      <div className="flex flex-wrap justify-center space-x-4 mb-6">
+        {scheduleConfig[scheduleType].blocks.map((block, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentBlockIndex(index)}
+            className={`px-5 py-3 rounded-lg transition-all ${
+              currentBlockIndex === index
+                ? "bg-blue-600 text-white shadow-lg scale-105"
+                : "bg-white text-blue-600 border border-blue-100 hover:bg-blue-50"
+            } flex items-center space-x-2 mb-2`}
+          >
+            {block.icon}
+            <span>{block.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Tableau des créneaux pour le bloc sélectionné */}
-      <div className="overflow-x-auto rounded-2xl border border-blue-100">
+      {/* Actions rapides */}
+      <div className="mb-6 p-4 bg-blue-50 rounded-xl">
+        <details>
+          <summary className="cursor-pointer font-medium text-blue-700 hover:text-blue-800">
+            Actions rapides
+          </summary>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {days.map((day) => (
+              <div key={day} className="flex space-x-2">
+                <button
+                  onClick={() => copyDayToAll(day)}
+                  className="text-xs px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg flex-1"
+                >
+                  Copier {day}
+                </button>
+                <button
+                  onClick={() => clearDay(day)}
+                  className="text-xs px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg"
+                >
+                  Effacer
+                </button>
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
+
+      {/* Tableau des créneaux amélioré */}
+      <div className="overflow-x-auto rounded-2xl border border-blue-100 shadow-lg">
         <table className="min-w-full bg-white">
           <thead className="bg-blue-600 text-white">
             <tr>
-              <th className="px-6 py-5 text-left sticky left-0 bg-blue-600 z-10">
+              <th className="px-6 py-5 text-left sticky left-0 bg-blue-600 z-10 w-40">
                 <span className="lg:pl-2">Intervalle</span>
               </th>
-              {["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].map(
-                (day) => (
-                  <th key={day} className="px-6 py-5 text-center">
-                    <span className="hidden lg:inline">{day}</span>
-                    <span className="lg:hidden">{day.slice(0, 3)}</span>
-                  </th>
-                )
-              )}
+              {days.map((day) => (
+                <th key={day} className="px-6 py-5 text-center">
+                  <span className="hidden lg:inline">{day}</span>
+                  <span className="lg:hidden">{day.slice(0, 3)}</span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
             {timeSlots.map((slot, index) => (
               <tr
-                key={slot.start}
-                className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}
+                key={`${slot.start}-${index}`}
+                className={slot.isBreak 
+                  ? "bg-yellow-50" 
+                  : index % 2 === 0 
+                    ? "bg-blue-50" 
+                    : "bg-white"
+                }
               >
-                <td className="px-6 py-5 font-semibold text-blue-800 whitespace-nowrap sticky left-0 bg-white border-r border-blue-100 z-10">
+                <td 
+                  className={`px-6 py-5 whitespace-nowrap sticky left-0 border-r border-blue-100 z-10 ${
+                    slot.isBreak
+                      ? "font-bold text-amber-700 bg-yellow-50"
+                      : "font-semibold text-blue-800 bg-inherit"
+                  }`}
+                >
                   {slot.start} - {slot.end}
+                  {slot.isBreak && (
+                    <div className="text-xs font-normal mt-1">Récréation</div>
+                  )}
                 </td>
-                {["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].map(
-                  (day) => (
-                    <td key={day} className="px-6 py-5">
+                
+                {days.map((day) => (
+                  <td key={`${day}-${slot.start}`} className="px-6 py-4">
+                    {slot.isBreak ? (
+                      <div className="w-full px-4 py-3 text-center text-amber-700 bg-yellow-50 rounded-xl border border-yellow-200">
+                        Pause
+                      </div>
+                    ) : (
                       <select
                         className="w-full px-4 py-3 border border-blue-200 rounded-xl 
                                  focus:outline-none focus:ring-2 focus:ring-blue-300 
-                                 bg-white placeholder-blue-300"
+                                 bg-white placeholder-blue-300 transition-all"
                         value={scheduleData[day]?.[slot.start] || ""}
                         onChange={(e) =>
                           handleScheduleChange(day, slot.start, e.target.value)
                         }
                       >
-                        <option value="">-- Choix --</option>
+                        <option value="">-- Sélectionner --</option>
                         {currentSubjects.map((subject) => (
                           <option
                             key={subject.name}
                             value={subject.name}
-                            className="py-3 bg-blue-50 hover:bg-blue-100"
                           >
                             {subject.name}
                           </option>
                         ))}
                       </select>
-                    </td>
-                  )
-                )}
+                    )}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Bouton de sauvegarde */}
-      <div className="flex justify-end mt-12">
+      {/* Actions en bas de page */}
+      <div className="flex flex-wrap justify-between mt-8 gap-4">
         <button
-          className="px-10 py-4 bg-gradient-to-r from-green-500 to-green-600 
-                     hover:from-green-600 hover:to-green-700 text-white 
-                     rounded-xl transition-all transform hover:scale-105 
-                     flex items-center space-x-3 shadow-lg"
+          className="px-6 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700
+                    rounded-xl transition-all hover:scale-105 flex items-center space-x-2"
+          onClick={exportSchedule}
+        >
+          <span>Exporter l'horaire</span>
+        </button>
+
+        <button
+          className={`px-10 py-4 rounded-xl transition-all transform hover:scale-105 
+                    flex items-center space-x-3 shadow-lg ${
+                      hasUnsavedChanges 
+                        ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white" 
+                        : "bg-gray-100 text-gray-500"
+                    }`}
           onClick={saveSchedule}
-          disabled={isSaving}
+          disabled={isSaving || !hasUnsavedChanges}
         >
           {isSaving ? (
             <div className="flex items-center space-x-3">
