@@ -13,11 +13,16 @@ import DashHome from "../components/dashbordcomp/DashHome";
 import Parametres from "../components/dashbordcomp/parametres/parametres";
 import ListeDesProfs from "../components/dashbordcomp/prof/ListeDesProf";
 import BulletinEleve from "../components/dashbordcomp/bulletin/BulletinEleve";
-import ListeDesCours from "../components/dashbordcomp/prof/listeDesCours";
 import EleveListeDesCours from "../components/dashbordcomp/eleve/EleveListeDesCours";
 import Cours from "../components/dashbordcomp/classes/cours";
 import HoraireDeLEleve from "../components/dashbordcomp/eleve/horaireDeLEleve";
+import HoraireExamEleve from "../components/dashbordcomp/eleve/horaireExamEleve";
+import HoraireExamProf from "../components/dashbordcomp/prof/horaireExamProf";
 import HoraireProf from "../components/dashbordcomp/prof/horaireProf";
+import ListeDesCours from "../components/dashbordcomp/prof/listeDesCours";
+import ListeDisp from "../components/dashbordcomp/classes/listeDisp";
+import Horaire from "../components/dashbordcomp/classes/horaire";
+import HoraireExam from "../components/dashbordcomp/classes/horaireExam";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
@@ -40,16 +45,50 @@ export default function DashboardFullScreen() {
         <ClassesDashboard
           onClassSelect={(className) => {
             setSelectedClass(className);
-            setSelectedPage("listeDesCours");
+            // Passage à la vue intermédiaire listeDisp
+            setSelectedPage("listeDisp");
           }}
         />
       );
       break;
+      case "listeDisp":
+        content = (
+          <ListeDisp
+            selectedClass={selectedClass}
+            onOptionSelect={(option) => setSelectedPage(option)}
+          />
+        );
+        break;
+
+        case "horaire":
+          content = selectedClass ? (
+            <Horaire selectedClass={selectedClass} 
+            onRetour={() => setSelectedPage("listeDisp")}
+            />
+          ) : (
+            <div className="text-2xl font-semibold text-center p-4">
+              Veuillez sélectionner une classe pour afficher l'horaire.
+            </div>
+          );
+          break;
+
+          case "horaireExam":
+            content = selectedClass ? (
+              <HoraireExam selectedClass={selectedClass} 
+              onRetour={() => setSelectedPage("listeDisp")}
+              />
+            ) : (
+              <div className="text-2xl font-semibold text-center p-4">
+                Veuillez sélectionner une classe pour afficher l'horaire.
+              </div>
+            );
+            break;
+      
     case "listeDesCours":
       content = selectedClass ? (
-        <Cours selectedClass={selectedClass} 
-        onRetour={() => setSelectedPage("ClassesEtCours")}
-        
+        <Cours
+          selectedClass={selectedClass}
+          onRetour={() => setSelectedPage("listeDisp")}
         />
       ) : (
         <div className="text-2xl font-semibold text-center p-4">
@@ -57,32 +96,37 @@ export default function DashboardFullScreen() {
         </div>
       );
       break;
-    
     case "EnregistrementEleve":
       content = <EleveForm />;
       break;
+      case "HorairedesexamensEleve":
+        content = <HoraireExamEleve />;
+        break;
+    case "HorairedesexamensProf":
+          content = <HoraireExamProf />;
+          break;
     case "EnregistrementProfesseur":
       content = <ProfesseurForm />;
       break;
     case "ListeDesCours":
       content = <ListeDesCours />;
       break;
-      case "cours":
-            content = <EleveListeDesCours />;
-            break;
+    case "cours":
+      content = <EleveListeDesCours />;
+      break;
     case "listeclasses":
-       
       content = <BulletinListeEleve />;
       break;
     case "bulletin":
       content = <BulletinEleve />;
       break;
-         case "horaireProf":
-              content = <HoraireProf/>;
-              break;
-              case "horaireEleve":
-                content = <HoraireDeLEleve />;
-                break;
+    case "horaireProf":
+      content = <HoraireProf />;
+      break;
+    case "horaireEleve":
+      content = <HoraireDeLEleve />;
+      break;
+
     case "listeprof":
       content = <ListeDesProfs />;
       break;
@@ -123,10 +167,10 @@ export default function DashboardFullScreen() {
       break;
     case "bulletinNotesListeEleve":
       content = selectedClass ? (
-        <ListeDesEleves selectedClass={selectedClass} 
-        onRetour={() => setSelectedPage("elevesparclasse")}
+        <ListeDesEleves
+          selectedClass={selectedClass}
+          onRetour={() => setSelectedPage("elevesparclasse")}
         />
-      
       ) : (
         <div className="text-2xl font-semibold text-center p-4">
           Veuillez sélectionner une classe.
@@ -153,7 +197,7 @@ export default function DashboardFullScreen() {
       <div className="md:grid md:grid-cols-[20%_80%] min-h-screen">
         {/* Navigation Sidebar */}
         <div
-          className={`fixed md:relative inset-y-0 left-0 w-64 transform ${
+          className={`fixed md:relative inset-y-0 left-0 transform ${
             isNavOpen ? "translate-x-0" : "-translate-x-full"
           } md:translate-x-0 z-40 w-72 transition-transform duration-300 ease-in-out bg-gradient-to-r from-blue-950 to-blue-800 shadow-xl`}
         >
