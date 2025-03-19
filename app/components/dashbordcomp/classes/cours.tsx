@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import { FaArrowLeft } from "react-icons/fa";
 import { CalendarDays } from "lucide-react";
-import Horaire from "./horaire";
 
 interface ProfesseurData {
   displayName: string;
@@ -240,10 +239,6 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
     );
   }
 
-  // Si showHoraire est activé, on affiche uniquement la page Horaire
-  if (showHoraire) {
-    return <Horaire selectedClass={selectedClass} onRetour={() => setShowHoraire(false)} />;
-  }
 
   return (
     <div className="max-w-4xl mx-auto mt-5 p-4 bg-white rounded-lg shadow-lg space-y-8">
@@ -255,13 +250,6 @@ export default function Cours({ selectedClass, onRetour }: CoursProps) {
         >
           <FaArrowLeft className="shrink-0" />
           <span>Retour</span>
-        </button>
-        <button
-          className="flex py-2 px-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md"
-          onClick={() => setShowHoraire(true)}
-        >
-          <CalendarDays className="mr-2" />
-          <span>Horaire</span>
         </button>
       </div>
 
