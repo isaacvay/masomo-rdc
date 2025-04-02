@@ -155,7 +155,7 @@ export default function Connexion() {
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>
             Nouveau ?{' '}
-            <a href="/pages/inscription" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <a href="/" className="text-indigo-600 hover:text-indigo-700 font-medium">
               Créer un compte
             </a>
           </p>
