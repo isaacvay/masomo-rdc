@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { auth, firestore } from "@/config/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
@@ -60,6 +61,17 @@ export default function EcoleSignup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Génération automatique de l'email à partir du nom de l'école
+  useEffect(() => {
+    if (formData.ecole) {
+      const emailGenerated =
+        formData.ecole.toLowerCase().replace(/\s+/g, "") + "@masomordc.com";
+      setFormData((prev) => ({ ...prev, email: emailGenerated }));
+    } else {
+      setFormData((prev) => ({ ...prev, email: "" }));
+    }
+  }, [formData.ecole]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +166,9 @@ export default function EcoleSignup() {
         <div className="inline-flex items-center justify-center bg-blue-100 p-4 rounded-full mb-4">
           <School className="h-8 w-8 text-blue-600" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Enregistrement École</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Enregistrement École
+        </h1>
         <p className="text-gray-500">
           Formulaire d'enregistrement pour les établissements scolaires de la RDC
         </p>
@@ -288,7 +302,7 @@ export default function EcoleSignup() {
           </div>
         </div>
 
-        {/* Email */}
+        {/* Email institutionnel généré automatiquement */}
         <div className="relative">
           <label
             htmlFor="email"
@@ -302,10 +316,10 @@ export default function EcoleSignup() {
               id="email"
               type="email"
               value={formData.email}
-              onChange={handleChange}
+              readOnly
               placeholder="Email institutionnel"
               required
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
