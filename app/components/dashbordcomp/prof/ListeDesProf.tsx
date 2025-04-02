@@ -36,9 +36,13 @@ export default function ListeDesProfs() {
           where("schoolId", "==", currentUser.uid),
           where("role", "in", ["prof", "professeur"])
         );
-        
+
         const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Prof[];
+        let data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Prof[];
+
+        // Trier les profs par ordre alphabétique (displayName)
+        data.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
         setProfs(data);
       } catch (err: any) {
         setError(err.message);
@@ -50,9 +54,12 @@ export default function ListeDesProfs() {
     fetchProfs();
   }, []);
 
-  const filteredProfs = profs.filter(prof =>
-    prof.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProfs = profs
+    .filter((prof) =>
+      prof.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    // Réappliquer le tri après filtrage
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6 md:p-8">
