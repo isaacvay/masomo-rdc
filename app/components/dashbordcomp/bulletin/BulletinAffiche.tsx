@@ -419,14 +419,14 @@ const handleSaveBulletin = async () => {
           <FaPrint className="w-4 h-4 mr-2" /> Exporter en PDF
         </button>
         )}
-               {(userRole === 'école' || userRole === 'professeur') && (
+      
           <button
           onClick={handleExportPDF}
           className="mt-2 ml-0 md:ml-4 px-4 py-2 w-full md:w-auto bg-green-500 text-white rounded hover:bg-green-600 flex justify-center items-center"
         >
           <FaPrint className="w-4 h-4 mr-2" /> Exporter en PDF
         </button>
-        )}
+      
          
       
        
