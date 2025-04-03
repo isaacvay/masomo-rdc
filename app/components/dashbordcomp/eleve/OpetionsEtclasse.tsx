@@ -1,8 +1,15 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { auth, firestore } from "@/config/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { sections } from "@/data/cours";
+import { Button } from "@headlessui/react";
+import {
+  ArrowUturnLeftIcon,
+  AcademicCapIcon,
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
 
 const colors = [
   "bg-blue-500",
@@ -41,7 +48,7 @@ interface AssociationData {
 }
 
 interface OptionsEtClasseFirestoreProps {
-  onCourseSelect: (courseName: string, className: string) => void;
+  onCourseSelect: (option: string, className: string, optionnel: string) => void;
 }
 
 export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtClasseFirestoreProps) {
@@ -50,6 +57,8 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
+  // État pour gérer le menu d'options d'une classe
+  const [selectedSubject, setSelectedSubject] = useState<{ subject: string; classe: string } | null>(null);
 
   // Récupération des données du professeur depuis Firestore
   useEffect(() => {
@@ -89,7 +98,7 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
     setOpenCategory(openCategory === category ? null : category);
   };
 
-  // Fonction utilitaire pour récupérer les infos d'une matière (icône, maxima, catégorie) depuis la constante "sections"
+  // Fonction utilitaire pour récupérer les infos d'une matière depuis la constante "sections"
   const getSubjectData = (subjectName: string, classe: string) => {
     for (const section of sections) {
       if (section.classe.includes(classe)) {
@@ -101,8 +110,7 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
   };
 
   // Regroupement des matières par catégorie en se basant sur les associations
-  // On ne conserve que les matières dont le nom figure dans teacherData.courses
-  // et on ne garde que les classes attribuées au professeur.
+  // On conserve uniquement les matières dont le nom figure dans teacherData.courses
   const groupedSubjectsByCategory = associations.reduce((acc, assocDoc) => {
     assocDoc.associations.forEach(assoc => {
       if (
@@ -136,10 +144,56 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
     >
   >);
 
-  // Conserver uniquement les catégories comportant au moins une matière filtrée
   const categories = Object.keys(groupedSubjectsByCategory).filter(category =>
     Object.keys(groupedSubjectsByCategory[category]).length > 0
   );
+
+  // Styles pour les boutons du menu
+  const baseButton =
+    "flex items-center gap-3 px-6 py-4 w-full text-left rounded-xl transition-all shadow-md";
+  const variants = {
+    primary:
+      "bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+    secondary:
+      "bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2",
+    back: "bg-gray-100 hover:bg-gray-200 text-gray-900 border border-gray-300 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2",
+  };
+  const iconStyle = "w-6 h-6";
+
+  // Si le menu d'options pour une classe est ouvert, on affiche le menu de sélection
+  if (selectedSubject) {
+    return (
+      <div className="p-6 max-w-xl mx-auto space-y-4">
+       
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {selectedSubject.subject} - {selectedSubject.classe}
+          </h1>
+        </header>
+        <div className="space-y-3">
+          <Button
+            onClick={() => onCourseSelect(selectedSubject.subject, selectedSubject.classe, "Interrogations")}
+            className={`${baseButton} ${variants.primary}`}
+          >
+            <AcademicCapIcon className={iconStyle} />
+            <span>Interrogations</span>
+          </Button>
+          <Button
+            onClick={() => onCourseSelect(selectedSubject.subject, selectedSubject.classe, "NoteslisteEleve")}
+            className={`${baseButton} ${variants.secondary}`}
+          >
+            <ClipboardDocumentListIcon className={iconStyle} />
+            <span>Notes Générales</span>
+          </Button>
+        </div>
+
+        <Button onClick={() => setSelectedSubject(null)} className={`${baseButton} ${variants.back} shadow-sm`}>
+          <ArrowUturnLeftIcon className={iconStyle} />
+          <span>Retour</span>
+        </Button>
+      </div>
+    );
+  }
 
   if (loading)
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Chargement en cours...</div>;
@@ -166,7 +220,13 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
                 <div
                   key={subject.name}
                   className="bg-white shadow-lg rounded-xl p-4 flex flex-col border border-gray-100 cursor-pointer"
-                  onClick={() => onCourseSelect(subject.name, subject.classes[0])}
+                  // Au lieu d'appeler onCourseSelect directement, on ouvre le menu d'options pour cette matière/classe
+                  onClick={() =>
+                    setSelectedSubject({
+                      subject: subject.name,
+                      classe: subject.classes[0],
+                    })
+                  }
                 >
                   <div className="flex flex-row border-b pb-3">
                     <span className="text-4xl pr-2">{subject.icon}</span>
@@ -184,7 +244,10 @@ export default function OptionsEtClasseFirestore({ onCourseSelect }: OptionsEtCl
                             className="border-b pl-3 py-2 hover:bg-gray-100 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onCourseSelect(subject.name, cls);
+                              setSelectedSubject({
+                                subject: subject.name,
+                                classe: cls,
+                              });
                             }}
                           >
                             {cls}
