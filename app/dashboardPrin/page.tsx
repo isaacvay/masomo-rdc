@@ -23,6 +23,7 @@ import ListeDesCours from "../components/dashbordcomp/prof/listeDesCours";
 import ListeDisp from "../components/dashbordcomp/classes/listeDisp";
 import Horaire from "../components/dashbordcomp/classes/horaire";
 import HoraireExam from "../components/dashbordcomp/classes/horaireExam";
+import Interro from "../components/dashbordcomp/eleve/Interro";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
@@ -51,39 +52,38 @@ export default function DashboardFullScreen() {
         />
       );
       break;
-      case "listeDisp":
-        content = (
-          <ListeDisp
-            selectedClass={selectedClass}
-            onOptionSelect={(option) => setSelectedPage(option)}
-          />
-        );
-        break;
-
-        case "horaire":
-          content = selectedClass ? (
-            <Horaire selectedClass={selectedClass} 
-            onRetour={() => setSelectedPage("listeDisp")}
-            />
-          ) : (
-            <div className="text-2xl font-semibold text-center p-4">
-              Veuillez sélectionner une classe pour afficher l'horaire.
-            </div>
-          );
-          break;
-
-          case "horaireExam":
-            content = selectedClass ? (
-              <HoraireExam selectedClass={selectedClass} 
-              onRetour={() => setSelectedPage("listeDisp")}
-              />
-            ) : (
-              <div className="text-2xl font-semibold text-center p-4">
-                Veuillez sélectionner une classe pour afficher l'horaire.
-              </div>
-            );
-            break;
-      
+    case "listeDisp":
+      content = (
+        <ListeDisp
+          selectedClass={selectedClass}
+          onOptionSelect={(option) => setSelectedPage(option)}
+        />
+      );
+      break;
+    case "horaire":
+      content = selectedClass ? (
+        <Horaire
+          selectedClass={selectedClass}
+          onRetour={() => setSelectedPage("listeDisp")}
+        />
+      ) : (
+        <div className="text-2xl font-semibold text-center p-4">
+          Veuillez sélectionner une classe pour afficher l'horaire.
+        </div>
+      );
+      break;
+    case "horaireExam":
+      content = selectedClass ? (
+        <HoraireExam
+          selectedClass={selectedClass}
+          onRetour={() => setSelectedPage("listeDisp")}
+        />
+      ) : (
+        <div className="text-2xl font-semibold text-center p-4">
+          Veuillez sélectionner une classe pour afficher l'horaire.
+        </div>
+      );
+      break;
     case "listeDesCours":
       content = selectedClass ? (
         <Cours
@@ -99,12 +99,12 @@ export default function DashboardFullScreen() {
     case "EnregistrementEleve":
       content = <EleveForm />;
       break;
-      case "HorairedesexamensEleve":
-        content = <HoraireExamEleve />;
-        break;
+    case "HorairedesexamensEleve":
+      content = <HoraireExamEleve />;
+      break;
     case "HorairedesexamensProf":
-          content = <HoraireExamProf />;
-          break;
+      content = <HoraireExamProf />;
+      break;
     case "EnregistrementProfesseur":
       content = <ProfesseurForm />;
       break;
@@ -126,17 +126,22 @@ export default function DashboardFullScreen() {
     case "horaireEleve":
       content = <HoraireDeLEleve />;
       break;
-
     case "listeprof":
       content = <ListeDesProfs />;
       break;
     case "SaisieDeNotes":
+      // Ici, nous modifions la callback pour rediriger selon l'option sélectionnée
       content = (
         <OpetionsEtclasse
-          onCourseSelect={(courseName, className) => {
+          onCourseSelect={(courseName, className, optinnel) => {
             setSelectedCourse(courseName);
             setSelectedClassForCourse(className);
-            setSelectedPage("NoteslisteEleve");
+            // Si l'option sélectionnée est "Interrogations", on va vers la page Interro
+            if (optinnel === "Interrogations") {
+              setSelectedPage("Interro");
+            } else {
+              setSelectedPage("NoteslisteEleve");
+            }
           }}
         />
       );
@@ -176,6 +181,20 @@ export default function DashboardFullScreen() {
           Veuillez sélectionner une classe.
         </div>
       );
+      break;
+    case "Interro":
+      content =
+        selectedCourse && selectedClassForCourse ? (
+          <Interro
+            selectedCourse={selectedCourse}
+            selectedClass={selectedClassForCourse}
+            onRetour={() => setSelectedPage("SaisieDeNotes")}
+          />
+        ) : (
+          <div className="text-2xl font-semibold text-center p-4">
+            Veuillez sélectionner un cours et une classe.
+          </div>
+        );
       break;
     default:
       content = <DashHome />;
