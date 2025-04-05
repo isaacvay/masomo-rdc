@@ -18,6 +18,7 @@ interface GradeTableProps {
   removeTest: () => void;
   // Nouvelle fonction pour sauvegarder la moyenne d'un élève
   handleSaveAverage: (studentId: string) => void;
+  handleSave: ( studentId: string) => void;
 }
 
 export default function GradeTable({ 
@@ -28,6 +29,7 @@ export default function GradeTable({
   addTest, 
   removeTest,
   handleSaveAverage,
+  handleSave,
 }: GradeTableProps) {
   // Fonction pour calculer la moyenne d'un élève
   const calculateAverage = (grades: number[]): number => {
@@ -142,7 +144,7 @@ export default function GradeTable({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-center">
                     <button
-                      onClick={() => handleSaveAverage(student.uid)}
+                      onClick={() => { handleSaveAverage(student.uid); handleSave(student.uid); }}
                       className="px-3 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors"
                     >
                       Enregistrer
