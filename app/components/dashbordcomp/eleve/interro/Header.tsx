@@ -9,6 +9,7 @@ interface HeaderProps {
   isSaving: boolean;
   isLoading: boolean;
   handleSave: () => void;
+  handleSaveAverage: () => void;
 }
 
 export default function Header({
@@ -19,6 +20,7 @@ export default function Header({
   isSaving,
   isLoading,
   handleSave,
+  handleSaveAverage,
 }: HeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -52,22 +54,40 @@ export default function Header({
         </div>
       </div>
       
-      <button
-        onClick={handleSave}
-        disabled={isSaving || isLoading}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-          isSaving || isLoading
-            ? 'bg-blue-400 cursor-not-allowed' 
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
-        }`}
-      >
-        {isSaving ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Save className="w-5 h-5" />
-        )}
-        {isSaving ? 'Enregistrement...' : 'Enregistrer tout'}
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={handleSave}
+          disabled={isSaving || isLoading}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            isSaving || isLoading
+              ? 'bg-blue-400 cursor-not-allowed' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          {isSaving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Save className="w-5 h-5" />
+          )}
+          {isSaving ? 'Enregistrement...' : 'Enregistrer tout'}
+        </button>
+        <button
+          onClick={handleSaveAverage}
+          disabled={isSaving || isLoading}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            isSaving || isLoading
+              ? 'bg-green-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+          }`}
+        >
+          {isSaving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Save className="w-5 h-5" />
+          )}
+          {isSaving ? 'Enregistrement...' : 'Enregistrer la moyenne'}
+        </button>
+      </div>
     </div>
   );
 }
