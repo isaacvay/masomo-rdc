@@ -16,17 +16,28 @@ interface GradeTableProps {
   handleGradeChange: (studentId: string, testIndex: number, value: string) => void;
   addTest: () => void;
   removeTest: () => void;
+  // Nouvelle fonction pour sauvegarder la moyenne d'un élève
+  handleSaveAverage: (studentId: string) => void;
 }
 
-export default function GradeTable({ students, numTests, courseMax, handleGradeChange, addTest, removeTest }: GradeTableProps) {
+export default function GradeTable({ 
+  students, 
+  numTests, 
+  courseMax, 
+  handleGradeChange, 
+  addTest, 
+  removeTest,
+  handleSaveAverage,
+}: GradeTableProps) {
   // Fonction pour calculer la moyenne d'un élève
   const calculateAverage = (grades: number[]): number => {
     if (grades.length === 0) return 0;
     
     const sum = grades.reduce((acc, grade) => acc + (grade || 0), 0);
-    const average = (sum / grades.length) * (courseMax / courseMax); // Normalise par rapport à 20
+    // La moyenne est calculée sur la base des notes saisies (normalisée ici par le nombre d'épreuves)
+    const average = sum / grades.length;
     
-    return Math.min(average, courseMax); // La moyenne ne peut pas dépasser 20
+    return Math.min(average, courseMax);
   };
  
   if (students.length === 0) {
@@ -48,7 +59,7 @@ export default function GradeTable({ students, numTests, courseMax, handleGradeC
         
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>Interros:</span>
+            <span>Interros :</span>
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 py-1">
               <button
                 onClick={removeTest}
@@ -86,6 +97,9 @@ export default function GradeTable({ students, numTests, courseMax, handleGradeC
               ))}
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Moyenne
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
               </th>
             </tr>
           </thead>
@@ -126,6 +140,14 @@ export default function GradeTable({ students, numTests, courseMax, handleGradeC
                       {average.toFixed(1)} / {courseMax}
                     </span>
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => handleSaveAverage(student.uid)}
+                      className="px-3 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors"
+                    >
+                      Enregistrer
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -134,7 +156,7 @@ export default function GradeTable({ students, numTests, courseMax, handleGradeC
       </div>
       
       {/* Légende */}
-      <div className="mt-4 pb-10 flex flex-wrap items-center mr-6 justify-end gap-4 text-xs text-gray-500">
+      <div className="mt-4 pb-10 flex flex-wrap items-center justify-end gap-4 text-xs text-gray-500">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-100 border border-green-300"></div>
           <span>Moyenne ≥ {courseMax / 2}</span>
