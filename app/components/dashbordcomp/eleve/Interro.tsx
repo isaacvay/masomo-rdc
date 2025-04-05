@@ -338,6 +338,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
             handleGradeChange={handleGradeChange}
             addTest={addTest}
             removeTest={removeTest}
+            handleSave={handleSave}
             handleSaveAverage={handleSaveAverage}
           />
         </div>
