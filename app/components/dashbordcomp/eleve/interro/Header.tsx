@@ -69,7 +69,7 @@ export default function Header({
           ) : (
             <Save className="w-5 h-5" />
           )}
-          {isSaving ? 'Enregistrement...' : 'Enregistrer tout'}
+          {isSaving ? 'Enregistrement...' : 'Enregistrer les Interros'}
         </button>
         <button
           onClick={handleSaveAverage}
