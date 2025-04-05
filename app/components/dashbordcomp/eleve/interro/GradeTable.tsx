@@ -16,9 +16,9 @@ interface GradeTableProps {
   handleGradeChange: (studentId: string, testIndex: number, value: string) => void;
   addTest: () => void;
   removeTest: () => void;
-  // Nouvelle fonction pour sauvegarder la moyenne d'un élève
-  handleSaveAverage: (studentId: string) => void;
-  handleSave: ( studentId: string) => void;
+  // Mise à jour : ces fonctions ne prennent plus d'argument, elles mettent à jour tous les élèves
+  handleSaveAverage: () => void;
+  handleSave: () => void;
 }
 
 export default function GradeTable({ 
@@ -100,15 +100,15 @@ export default function GradeTable({
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Moyenne
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {students.map(student => {
               const grades = student.grades.slice(0, numTests);
-              const average = calculateAverage(grades);
+              // Utilise student.average s'il existe, sinon calcule la moyenne
+              const average = typeof student.average !== 'undefined'
+                ? student.average
+                : calculateAverage(grades);
               
               return (
                 <tr key={student.uid} className="hover:bg-gray-50 transition-colors">
@@ -141,14 +141,6 @@ export default function GradeTable({
                     }`}>
                       {average.toFixed(1)} / {courseMax}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => { handleSaveAverage(student.uid); handleSave(student.uid); }}
-                      className="px-3 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors"
-                    >
-                      Enregistrer
-                    </button>
                   </td>
                 </tr>
               );
