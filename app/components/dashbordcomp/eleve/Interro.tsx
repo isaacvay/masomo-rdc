@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { auth, firestore } from '@/config/firebase';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import GradeTable from './interro/GradeTable';
 import Header from './interro/Header';
 import PeriodNavigation from './interro/PeriodNavigation';
@@ -15,17 +15,6 @@ interface Student {
   numPerm: string;
   grades: number[];
   average?: number;
-}
-
-interface GradeRecord {
-  value: number;
-  date: Date;
-  period: number;
-  testNumber: number;
-  course: string;
-  class: string;
-  studentName: string;
-  studentId: string;
 }
 
 interface InterroProps {
@@ -56,7 +45,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     return 20;
   };
 
-  // Fonction de calcul de la moyenne normalisée sur courseMax
+  // Calcul de la moyenne normalisée sur courseMax
   const calculateAverage = (grades: number[]): number => {
     const courseMax = getCourseMax();
     if (grades.length === 0) return 0;
@@ -116,7 +105,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
           ...doc.data()
         })) as Student[];
 
-        // Pour chaque élève, charger les notes depuis la sous-collection Interro
+        // Pour chaque élève, charger les notes de la période active depuis la sous-collection "Interro"
         const studentsWithGrades = await Promise.all(
           studentsData.map(async (student) => {
             try {
@@ -166,6 +155,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }
   }, [schoolUid, selectedClass, selectedCourse, activePeriod, numTests]);
 
+  // Gestion de la modification d'une note
   const handleGradeChange = (studentId: string, testIndex: number, value: string) => {
     const numericValue = parseFloat(value) || 0;
     const newGrade = value === '' ? 0 : Math.min(getCourseMax(), Math.max(0, numericValue));
@@ -183,6 +173,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }));
   };
 
+  // Ajout et suppression d'une épreuve
   const addTest = () => {
     const newNumTests = numTests + 1;
     setNumTests(newNumTests);
@@ -205,6 +196,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }
   };
 
+  // Enregistrement complet : notes détaillées et moyennes par période
   const handleSave = async () => {
     if (!schoolUid) {
       setToast({ message: "Erreur: École non identifiée", type: 'error' });
@@ -213,13 +205,10 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }
     setIsSaving(true);
     try {
-      // Mapping des périodes vers index
-      const periodToIndex: { [key: number]: number } = {1:0, 2:1, 3:3, 4:4};
-      const index = periodToIndex[activePeriod] ?? activePeriod;
-
-      // Enregistrement dans la sous-collection Interro
+      // 1. Enregistrement des notes détaillées dans la sous-collection "Interro"
       const savePromises = students.flatMap(student =>
         student.grades.map(async (grade, testNumber) => {
+          // Enregistre seulement si la note est supérieure à zéro (ou selon une logique choisie)
           if (grade > 0) {
             const interroCollectionRef = collection(
               firestore,
@@ -229,7 +218,7 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
               interroCollectionRef,
               `${selectedCourse}.period${activePeriod}.test${testNumber}`
             );
-            const gradeData: GradeRecord = {
+            await setDoc(gradeDocRef, {
               value: grade,
               date: new Date(),
               period: activePeriod,
@@ -238,29 +227,40 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
               class: selectedClass,
               studentName: student.displayName,
               studentId: student.uid
-            };
-            await setDoc(gradeDocRef, gradeData, { merge: true });
+            }, { merge: true });
           }
         })
       );
-      await Promise.all(savePromises);
 
-      // Mise à jour des moyennes dans le document élève
+      // 2. Mise à jour des moyennes dans le document principal
       const updatePromises = students.map(async student => {
-        const studentRef = doc(firestore, `schools/${schoolUid}/students/${student.uid}`);
-        await updateDoc(studentRef, {
-          [`grades.${selectedCourse}.${index}`]: {
-            average: student.average,
-            lastUpdated: new Date()
-          }
-        });
-      });
-      await Promise.all(updatePromises);
+        const gradeDocRef = doc(
+          firestore,
+          "schools",
+          schoolUid,
+          "grades",
+          `${student.numPerm}_${selectedCourse}`
+        );
+        
+        // Création d'un tableau pour 4 périodes (les indices 0 à 3 correspondent à P1 à P4)
+        const gradesMapping = Array(4).fill(0);
+        gradesMapping[activePeriod - 1] = student.average || 0;
 
-      setToast({ message: "Toutes les notes ont été enregistrées avec succès", type: 'success' });
+        await setDoc(gradeDocRef, {
+          studentName: student.displayName,
+          numPerm: student.numPerm,
+          grades: gradesMapping, // Stockage des moyennes par période
+          course: selectedCourse,
+          class: selectedClass,
+          updatedAt: new Date()
+        }, { merge: true });
+      });
+
+      await Promise.all([...savePromises, ...updatePromises]);
+      setToast({ message: "Toutes les données ont été enregistrées", type: 'success' });
     } catch (error) {
       console.error("Erreur lors de l'enregistrement :", error);
-      const errMessage = error instanceof Error ? error.message : "Erreur lors de l'enregistrement";
+      const errMessage = error instanceof Error ? error.message : "Erreur inconnue";
       setToast({ message: errMessage, type: 'error' });
     } finally {
       setIsSaving(false);
@@ -268,49 +268,74 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }
   };
 
-  // Nouvelle fonction pour sauvegarder uniquement la moyenne en utilisant setDoc avec merge
-  const handleSaveAverage = async () => {
-    if (!schoolUid) {
-      setToast({ message: "Erreur: École non identifiée", type: 'error' });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    setIsSaving(true);
-    try {
-      // Mapping des périodes vers index
-      const periodToIndex: { [key: number]: number } = {1:0, 2:1, 3:3, 4:4};
-      const index = periodToIndex[activePeriod] ?? activePeriod;
+  // Fonction optimisée pour ne sauvegarder que les moyennes en respectant le mapping des périodes
+const handleSaveAverage = async () => {
+  if (!schoolUid) {
+    setToast({ message: "Erreur: École non identifiée", type: "error" });
+    setTimeout(() => setToast(null), 3000);
+    return;
+  }
+  setIsSaving(true);
+  try {
+    // Mapping : Période 1 → indice 0, Période 2 → indice 1, Période 3 → indice 3, Période 4 → indice 4
+    const periodMapping: { [key: number]: number } = { 1: 0, 2: 1, 3: 3, 4: 4 };
 
-      
-      const updatePromises = students.map(async student => {
-        const studentRef = doc(firestore, `schools/${schoolUid}/students/${student.uid}`);
-        await setDoc(
-          studentRef,
-          {
-            grades: {
-              [selectedCourse]: {
-                [index]: {
-                  average: student.average,
-                  lastUpdated: new Date()
-                } 
-              }
-            }
-          },
-          { merge: true }
-        );
-      });
+    const updatePromises = students.map(async (student) => {
+      const gradeDocRef = doc(
+        firestore,
+        "schools",
+        schoolUid,
+        "grades",
+        `${student.numPerm}_${selectedCourse}`
+      );
 
-      await Promise.all(updatePromises);
-      setToast({ message: "Les moyennes ont été enregistrées avec succès", type: 'success' });
-    } catch (error) {
-      console.error("Erreur lors de l'enregistrement des moyennes :", error);
-      const errMessage = error instanceof Error ? error.message : "Erreur lors de l'enregistrement des moyennes";
-      setToast({ message: errMessage, type: 'error' });
-    } finally {
-      setIsSaving(false);
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
+      // Récupération du document existant ou initialisation d'un tableau de 6 éléments à 0
+      const docSnap = await getDoc(gradeDocRef);
+      const existingGrades: number[] = docSnap.exists()
+        ? docSnap.data().grades || Array(6).fill(0)
+        : Array(6).fill(0);
+
+      // On s'assure d'avoir exactement 6 éléments dans le tableau
+      const newGrades = [...existingGrades];
+      if (newGrades.length < 6) {
+        while (newGrades.length < 6) {
+          newGrades.push(0);
+        }
+      } else if (newGrades.length > 6) {
+        newGrades.length = 6;
+      }
+
+      // Mise à jour de la moyenne de la période active uniquement si elle existe
+      if (typeof student.average !== "undefined") {
+        newGrades[periodMapping[activePeriod]] = student.average;
+      }
+
+      await setDoc(
+        gradeDocRef,
+        {
+          studentName: student.displayName,
+          numPerm: student.numPerm,
+          grades: newGrades, // Tableau complet des 6 valeurs
+          course: selectedCourse,
+          class: selectedClass,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+    });
+
+    await Promise.all(updatePromises);
+    setToast({ message: "Moyennes mises à jour avec succès", type: "success" });
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des moyennes :", error);
+    const errMessage = error instanceof Error ? error.message : "Erreur inconnue";
+    setToast({ message: errMessage, type: "error" });
+  } finally {
+    setIsSaving(false);
+    setTimeout(() => setToast(null), 3000);
+  }
+};
+
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
