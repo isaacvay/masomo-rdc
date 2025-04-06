@@ -139,7 +139,7 @@ export default function GradeTable({
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {average.toFixed(1)} / {courseMax}
+                      {average} / {courseMax}
                     </span>
                   </td>
                 </tr>
