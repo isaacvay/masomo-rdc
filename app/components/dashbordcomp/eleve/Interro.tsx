@@ -45,15 +45,16 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     return 20;
   };
 
-  // Calcul de la moyenne normalisée sur courseMax
-  const calculateAverage = (grades: number[]): number => {
-    const courseMax = getCourseMax();
-    if (grades.length === 0) return 0;
-    const totalObtained = grades.reduce((a, b) => a + b, 0);
-    const totalPossible = grades.length * courseMax;
-    const normalized = (totalObtained / totalPossible) * courseMax;
-    return parseFloat(normalized.toFixed(1));
-  };
+ // Calcul de la moyenne normalisée sur courseMax
+const calculateAverage = (grades: number[]): number => {
+  const courseMax = getCourseMax();
+  if (grades.length === 0) return 0;
+  const totalObtained = grades.reduce((a, b) => a + b, 0);
+  const totalPossible = grades.length * courseMax;
+  const normalized = (totalObtained / totalPossible) * courseMax;
+  return Math.round(normalized);
+};
+
 
   // Récupération du schoolUid
   useEffect(() => {
