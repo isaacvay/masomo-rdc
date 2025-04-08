@@ -218,10 +218,10 @@ export default function HoraireProf() {
             </p>
           )}
         </header>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 ">
           {daysOrder.map((day) => (
-            <div key={day} className="bg-white rounded-2xl shadow-lg flex flex-col overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-3 px-4">
+            <div key={day} className="bg-white shadow-lg flex flex-col overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4">
                 <h2 className="text-xl font-bold text-center">{day}</h2>
               </div>
               <div className="flex-1 p-4 space-y-4">
