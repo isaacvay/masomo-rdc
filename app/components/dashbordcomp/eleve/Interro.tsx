@@ -313,7 +313,98 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
 
   // handleSaveAverage reste inchangé dans cette partie
   const handleSaveAverage = async () => {
-    // ... code inchangé pour la mise à jour des moyennes ...
+    if (!schoolUid) {
+      setToast({ message: "Erreur: École non identifiée", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const regularPeriods = [1, 2, 3, 4];
+      const requiredLength = 6;
+      
+      const updatePromises = students.map(async (student) => {
+        const gradeDocRef = doc(
+          firestore,
+          "schools",
+          schoolUid,
+          "grades",
+          `${student.numPerm}_${selectedCourse}`
+        );
+        const finalAverages: number[] = Array(requiredLength).fill(0);
+        const gradesByPeriod: { [period: number]: number[] } = {};
+        regularPeriods.forEach(p => {
+          gradesByPeriod[p] = [];
+        });
+        
+        let examGradeP5 = 0;
+        let examGradeP6 = 0;
+        
+        const interroCollectionRef = collection(
+          firestore,
+          `schools/${schoolUid}/students/${student.uid}/Interro`
+        );
+        const q = query(interroCollectionRef, where("course", "==", selectedCourse));
+        const snapshot = await getDocs(q);
+        
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const period = data.period;
+          const testNumber = data.testNumber;
+          if (testNumber === 'exam') {
+            if (period === 5) {
+              examGradeP5 = data.value;
+            } else if (period === 6) {
+              examGradeP6 = data.value;
+            }
+          } else if (typeof testNumber === 'number' && regularPeriods.includes(period)) {
+            gradesByPeriod[period].push(data.value);
+          }
+        });
+        
+        const calculateAvg = (grades: number[]): number => {
+          if (grades.length === 0) return 0;
+          const sum = grades.reduce((acc, val) => acc + val, 0);
+          return Math.round(sum / grades.length);
+        };
+        
+        finalAverages[0] = calculateAvg(gradesByPeriod[1]); // Moyenne Période 1
+        finalAverages[1] = calculateAvg(gradesByPeriod[2]); // Moyenne Période 2
+        finalAverages[3] = calculateAvg(gradesByPeriod[3]); // Moyenne Période 3
+        finalAverages[4] = calculateAvg(gradesByPeriod[4]); // Moyenne Période 4
+        
+        // Attribution des examens selon maxima[2]
+        finalAverages[2] = examGradeP5; // Examen (Période 5)
+        finalAverages[5] = examGradeP6; // Examen (Période 6)
+        
+        const globalSum = finalAverages.reduce((acc, grade) => acc + grade, 0);
+        const globalAverage = Math.round(globalSum / requiredLength);
+        
+        await setDoc(
+          gradeDocRef,
+          {
+            studentName: student.displayName,
+            numPerm: student.numPerm,
+            grades: finalAverages,
+            average: globalAverage,
+            course: selectedCourse,
+            class: selectedClass,
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        );
+      });
+      
+      await Promise.all(updatePromises);
+      setToast({ message: "Moyennes mises à jour avec succès", type: "success" });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des moyennes :", error);
+      const errMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      setToast({ message: errMessage, type: "error" });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   return (
