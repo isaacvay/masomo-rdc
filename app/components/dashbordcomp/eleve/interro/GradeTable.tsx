@@ -181,7 +181,7 @@ export default function GradeTable({
         </table>
       </div>
       
-      <div className="mt-4 pb-10 flex flex-wrap items-center justify-end gap-4 text-xs text-gray-500">
+      <div className="mt-4 pb-10 flex flex-wrap items-center justify-end gap-4  mr-5 text-xs text-gray-500">
         {activePeriod < 5 && (
           <>
             <div className="flex items-center gap-2">
