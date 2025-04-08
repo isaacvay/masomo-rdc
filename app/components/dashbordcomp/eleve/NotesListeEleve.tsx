@@ -164,33 +164,33 @@ export default function ListeEleve({
   // Sauvegarde des notes pour un élève dans la sous-collection "grades" de l'école
   const handleSave = async (student: Student) => {
     try {
-      // On s'assure que toutes les notes sont des chaînes
+      // Récupération des notes dans l'ordre des colonnes (6 valeurs)
       const studentGrades = Array.from({ length: 6 }, (_, i) =>
         (grades[`${student.numPerm}-${i}`] || "").toString()
       );
-
+  
       // Vérifier que toutes les notes ne sont pas vides
       if (studentGrades.every((grade) => grade.trim() === "")) {
         setToast("Impossible d'enregistrer, tous les champs sont vides.");
         setTimeout(() => setToast(""), 3000);
         return;
       }
-
+  
       if (!schoolUid) {
         throw new Error("Aucune école connectée");
       }
-
+  
       if (!student.numPerm) {
         throw new Error("L'élève n'a pas de numéro de permis valide");
       }
-
+  
       setActionStatus((prev) => ({ ...prev, [student.numPerm]: "saving" }));
-
+  
       // Préparation des notes : conversion des chaînes vides en "0"
       const preparedGrades = studentGrades.map((grade) =>
         grade.trim() === "" ? "0" : grade.trim()
       );
-
+  
       // Vérification que les notes ne dépassent pas les maxima
       const maximaIndices = [0, 1, 2, 4, 5, 6];
       preparedGrades.forEach((grade, index) => {
@@ -199,7 +199,8 @@ export default function ListeEleve({
           throw new Error(`La note ${grade} dépasse le maximum autorisé de ${max}`);
         }
       });
-
+  
+      // Sauvegarde du document agrégé dans "schools/{schoolUid}/grades/{numPerm}_{selectedCourse}"
       const gradeDocRef = doc(
         firestore,
         "schools",
@@ -207,7 +208,7 @@ export default function ListeEleve({
         "grades",
         `${student.numPerm}_${selectedCourse}`
       );
-
+  
       await setDoc(
         gradeDocRef,
         {
@@ -220,7 +221,81 @@ export default function ListeEleve({
         },
         { merge: true }
       );
-
+  
+      // Référence à la sous-collection "Interro" de l'élève
+      const interroCollectionRef = collection(
+        firestore,
+        `schools/${schoolUid}/students/${student.uid}/Interro`
+      );
+  
+      // Pour le premier semestre :
+      // - Tests : indices 0 et 1 dans la collection "period1"
+      preparedGrades.slice(0, 2).forEach((grade, idx) => {
+        setDoc(
+          doc(interroCollectionRef, `${selectedCourse}.period1.test${idx}`),
+          {
+            value: parseFloat(grade),
+            date: new Date(),
+            period: 1,
+            testNumber: idx,
+            course: selectedCourse,
+            class: selectedClass,
+            studentName: student.displayName,
+            studentId: student.uid,
+          },
+          { merge: true }
+        );
+      });
+      // - Examen : indice 2 enregistré dans "period5" avec period: 5
+      setDoc(
+        doc(interroCollectionRef, `${selectedCourse}.period5.exam`),
+        {
+          value: parseFloat(preparedGrades[2]),
+          date: new Date(),
+          period: 5, // Correction : utilise 5 au lieu de 1
+          testNumber: "exam",
+          course: selectedCourse,
+          class: selectedClass,
+          studentName: student.displayName,
+          studentId: student.uid,
+        },
+        { merge: true }
+      );
+  
+      // Pour le second semestre :
+      // - Tests : indices 3 et 4 dans "period2"
+      preparedGrades.slice(3, 5).forEach((grade, idx) => {
+        setDoc(
+          doc(interroCollectionRef, `${selectedCourse}.period2.test${idx}`),
+          {
+            value: parseFloat(grade),
+            date: new Date(),
+            period: 2,
+            testNumber: idx,
+            course: selectedCourse,
+            class: selectedClass,
+            studentName: student.displayName,
+            studentId: student.uid,
+          },
+          { merge: true }
+        );
+      });
+      // - Examen : indice 5 enregistré dans "period6" avec period: 6
+      setDoc(
+        doc(interroCollectionRef, `${selectedCourse}.period6.exam`),
+        {
+          value: parseFloat(preparedGrades[5]),
+          date: new Date(),
+          period: 6, // Correction : utilise 6 au lieu de 2
+          testNumber: "exam",
+          course: selectedCourse,
+          class: selectedClass,
+          studentName: student.displayName,
+          studentId: student.uid,
+        },
+        { merge: true }
+      );
+  
       setActionStatus((prev) => ({ ...prev, [student.numPerm]: "saved" }));
       setToast("Sauvegarde réussie");
     } catch (error) {
@@ -231,6 +306,7 @@ export default function ListeEleve({
       setTimeout(() => setToast(""), 3000);
     }
   };
+  
 
   // Sauvegarde de toutes les notes des élèves affichés
   const handleSaveAll = async () => {
@@ -334,15 +410,17 @@ export default function ListeEleve({
                 <div>Exam</div>
                 <div className="text-sm font-medium">{currentMaxima[6] || 0}</div>
               </th>
-              <th className="py-2 px-4 bg-white">  <button
-                                    onClick={() => handleSaveAll()}
-                                    disabled={isLoading}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
-                                  >
-                                    {Object.values(actionStatus).includes("saving")
-                                      ? "Enregistrer..."
-                                      : "Enregistrer tout"}
-                                  </button></th>
+              <th className="py-2 px-4 bg-white">
+                  <button
+                      onClick={() => handleSaveAll()}
+                      disabled={isLoading}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+                      >
+                      {Object.values(actionStatus).includes("saving")
+                      ? "Enregistrer..."
+                      : "Enregistrer tout"}
+                  </button>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
