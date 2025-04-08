@@ -190,7 +190,7 @@ export default function GradeTable({
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-100 border border-red-300"></div>
-              <span>Moyenne &AL; {courseMax / 2}</span>
+              <span>Moyenne &lt; {courseMax / 2}</span>
             </div>
           </>
         )}
