@@ -1,3 +1,4 @@
+// DevoirProfListe.tsx
 import React from 'react';
 import { Devoir } from './DevoirProf';
 import { FaPlus } from 'react-icons/fa';
@@ -13,6 +14,20 @@ interface DevoirProfListeProps {
   onSelect: (devoir: Devoir) => void;
   onCreate: () => void;
 }
+
+// Fonction locale pour formater la date
+const formatDate = (dateString: string): string => {
+  const dateObj = new Date(dateString);
+  if (isNaN(dateObj.getTime())) return dateString;
+  return dateObj.toLocaleString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
 const DevoirProfListe: React.FC<DevoirProfListeProps> = ({ devoirs, onSelect, onCreate }) => {
   const getStatusClass = (status: string) => statusClasses[status as keyof typeof statusClasses] || statusClasses.default;
@@ -52,7 +67,7 @@ const DevoirProfListe: React.FC<DevoirProfListeProps> = ({ devoirs, onSelect, on
                   </span>
                 </header>
                 <footer className="mt-3">
-                  <p className="text-gray-500 text-sm">{devoir.date}</p>
+                  <p className="text-gray-500 text-sm">{formatDate(devoir.date)}</p>
                 </footer>
               </article>
             </li>
