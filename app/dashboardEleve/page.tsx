@@ -116,18 +116,6 @@ export default function DashboardFullScreen() {
     case "cours":
     content = (
       <EleveListeDesCours
-        devoir={{
-          id: "",
-          titre: "",
-          date: "",
-          matiere: "",
-          statut: "",
-          questions: [],
-          hasSubmitted:false
-        }}
-        onBack={() => setSelectedPage("SaisieDeNotes")}
-        initialReponses={[]}
-        schoolId=""
       />
     );
       break;
