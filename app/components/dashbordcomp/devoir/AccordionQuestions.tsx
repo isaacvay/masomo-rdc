@@ -28,8 +28,8 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
   };
 
   // Calcule le score total et les scores par question.
-  // Pour QCM : si une correction manuelle n'est pas définie, on applique la note automatique (points si réponse correcte, zéro sinon).
-  // Pour texte : on prend uniquement la saisie manuelle.
+  // Pour QCM : si aucune saisie manuelle n'est définie, on applique la note automatique (points si réponse correcte, zéro sinon).
+  // Pour texte : seule la saisie manuelle est prise en compte.
   const calculateScores = () => {
     let total = 0;
     const questionScores: Record<string, number> = {};
@@ -61,7 +61,21 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
   const { total, questionScores } = calculateScores();
   const maxScore = devoir.questions.reduce((sum, q) => sum + q.points, 0);
 
-  // Récupère les scores sauvegardés depuis Firestore, s'ils existent.
+  // Formatage de la date du devoir
+  const formattedDevoirDate = (() => {
+    if (!devoir.date) return '';
+    const dateObj = new Date(devoir.date);
+    return dateObj.toLocaleString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  })();
+
+  // Récupère les scores sauvegardés depuis Firestore s'ils existent.
   useEffect(() => {
     const fetchScore = async () => {
       if (studentResponse?.docId) {
@@ -118,26 +132,21 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
         className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${
-            studentResponse ? 'bg-green-500' : 'bg-gray-400'
-          }`}></div>
+          <div className={`w-3 h-3 rounded-full ${studentResponse ? 'bg-green-500' : 'bg-gray-400'}`}></div>
           <div>
-            <h3 className="font-medium text-gray-900">
-              {student.displayName || student.email}
-            </h3>
+            <h3 className="font-medium text-gray-900">{student.displayName || student.email}</h3>
             <p className="text-sm text-gray-500">{student.email}</p>
+            {devoir.date && (
+              <p className="text-xs text-gray-400">Devoir le : {formattedDevoirDate}</p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
           {studentResponse && (
-            <span className="text-sm font-medium">
-              {savedScore !== null ? savedScore : total} / {maxScore} pts
-            </span>
+            <span className="text-sm font-medium">{savedScore !== null ? savedScore : total} / {maxScore} pts</span>
           )}
           <svg 
-            className={`w-5 h-5 text-gray-400 transform transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
+            className={`w-5 h-5 text-gray-400 transform transition-transform ${isOpen ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -155,9 +164,7 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
                 {devoir.questions.map(question => (
                   <div key={question.id} className="p-4 bg-gray-50 rounded-lg">
                     <div className="flex justify-between items-start mb-3">
-                      <h4 className="font-medium text-gray-800">
-                        Question {question.numero}
-                      </h4>
+                      <h4 className="font-medium text-gray-800">Question {question.numero}</h4>
                       <span className="text-sm text-gray-500">
                         {question.type === 'qcm'
                           ? `${questionScores[question.id]} / ${question.points} pts`
@@ -175,20 +182,12 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
                         {question.options.map(opt => (
                           <li
                             key={opt.id}
-                            className={`p-2 rounded border ${
-                              opt.correcte
-                                ? 'border-green-200 bg-green-50'
-                                : 'border-gray-200 bg-white'
-                            } ${
-                              studentResponse.reponses[question.id] === opt.id.toString()
-                                ? 'ring-2 ring-blue-300'
-                                : ''
+                            className={`p-2 rounded border ${opt.correcte ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'} ${
+                              studentResponse.reponses[question.id] === opt.id.toString() ? 'ring-2 ring-blue-300' : ''
                             }`}
                           >
                             <div className="flex items-center">
-                              <span className={`inline-block w-4 h-4 rounded-full mr-2 ${
-                                opt.correcte ? 'bg-green-500' : 'bg-gray-300'
-                              }`}></span>
+                              <span className={`inline-block w-4 h-4 rounded-full mr-2 ${opt.correcte ? 'bg-green-500' : 'bg-gray-300'}`}></span>
                               <span>{opt.texte}</span>
                             </div>
                           </li>
@@ -227,9 +226,7 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
                       </div>
                     ) : (
                       <div className="mt-4">
-                        <span className="text-sm text-gray-700 font-medium">
-                          {questionScores[question.id]} / {question.points} pts
-                        </span>
+                        <span className="text-sm text-gray-700 font-medium">{questionScores[question.id]} / {question.points} pts</span>
                       </div>
                     )}
                   </div>
@@ -238,9 +235,7 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
               
               <div className="flex justify-between items-center border-t border-gray-200 pt-4">
                 <div className="font-medium">
-                  Total: <span className="text-blue-600">
-                    {savedScore !== null ? savedScore : total}
-                  </span> / {maxScore} points
+                  Total: <span className="text-blue-600">{savedScore !== null ? savedScore : total}</span> / {maxScore} points
                 </div>
                 <button
                   onClick={saveScore}
@@ -266,9 +261,7 @@ const StudentItem: React.FC<StudentItemProps> = ({ student, studentResponse, dev
               </div>
             </>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              Cet élève n'a pas soumis ce devoir
-            </div>
+            <div className="text-center py-4 text-gray-500">Cet élève n'a pas soumis ce devoir</div>
           )}
         </div>
       )}
