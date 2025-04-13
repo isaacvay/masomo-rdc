@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/config/firebase";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -12,14 +12,13 @@ import {
   UserPlusIcon,
   UsersIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  TableCellsIcon
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { Briefcase, CalendarDays, UserCircleIcon } from "lucide-react";
-import { Caladea } from "next/font/google";
-
-interface NavleftProps {
-  onPageChange: (page: string) => void;
-}
+import { Briefcase, CalendarDays, UserCircleIcon, BookCheck, BookKey, BookTemplate } from "lucide-react";
 
 interface AppUser {
   name: string;
@@ -35,98 +34,42 @@ interface NavItemData {
   isRed?: boolean;
 }
 
-const mainNavItems: NavItemData[] = [
-  { icon: <HomeIcon className="h-6 w-6" />, label: "Accueil", page: "Accueil" },
-  { icon: <Cog6ToothIcon className="h-6 w-6" />, label: "Paramètres", page: "Parametres" },
-];
+interface NavSection {
+  title: string;
+  items: NavItemData[];
+}
 
-const teacherNavItems: NavItemData[] = [
-  { icon: <BookOpenIcon className="h-6 w-6" />, label: "Saisie de Notes", page: "SaisieDeNotes" },
-  { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Devoir", page: "devoirProf" },
-  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireProf" },
-  { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Liste des cours", page: "ListeDesCours" },
-  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire des exam", page: "HorairedesexamensProf" },
-];
-
-const studentNavItems: NavItemData[] = [
-  { icon: <BookOpenIcon className="h-6 w-6" />, label: "Bulletin", page: "bulletin" },
-  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire", page: "horaireEleve" },
-  { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Devoir", page: "devoirEleve" },
-  { icon: <Briefcase className="h-6 w-6" />, label: "Cours", page: "cours" },
-  { icon:<CalendarDays className="h-6 w-6" /> , label: "Horaire des exam", page: "HorairedesexamensEleve" },
-];
-
-const titulaireNavItems: NavItemData[] = [
-  { icon: <UsersIcon className="h-6 w-6" />, label: "Bulletins", page: "listeclasses" },
-];
-
-const schoolNavItems: NavItemData[] = [
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscription élève", page: "EnregistrementEleve" },
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Ajouter un Prof", page: "EnregistrementProfesseur" },
-  { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Classes et Cours", page: "ClassesEtCours" },
-  { icon: <UsersIcon className="h-6 w-6" />, label: "Liste des profs", page: "listeprof" },
-  { icon: <ChartBarIcon className="h-6 w-6" />, label: "Élèves par classe", page: "elevesparclasse" },
-];
-
-const comptableNavItems: NavItemData[] = [
-  { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscription élève", page: "EnregistrementEleve" },
-  { icon: <ChartBarIcon className="h-6 w-6" />, label: "Élèves par classe", page: "elevesparclasse" },
-];
-
-const logoutItem: NavItemData = {
-  icon: <ArrowLeftOnRectangleIcon className="h-6 w-6" />,
-  label: "Déconnexion",
-  page: "Deconnexion",
-  isRed: true,
-};
-
-const NavItem = ({
-  icon,
-  label,
-  onClick,
-  isRed = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  isRed?: boolean;
-}) => (
-  <li>
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center space-x-4 px-4 py-3 rounded-lg transition transform hover:scale-105 duration-200 ${
-        isRed ? "text-red-400 hover:bg-red-500/20" : "text-gray-200 hover:bg-white/10"
-      }`}
-    >
-      <span className={`transition-transform duration-200 ${isRed ? "text-red-400" : "text-blue-400"}`}>
-        {icon}
-      </span>
-      <span className="text-md font-medium">{label}</span>
-    </button>
-  </li>
-);
-
-export default function Navleft({ onPageChange }: NavleftProps) {
-  const router = useRouter();
+const useUserData = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTitulaire, setIsTitulaire] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const db = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const docRef = doc(db, "users", firebaseUser.uid);
-        try {
+      try {
+        if (firebaseUser) {
+          const docRef = doc(db, "users", firebaseUser.uid);
           const docSnap = await getDoc(docRef);
+
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setUser({
+            const userData = {
               name: data.displayName || firebaseUser.email || "Utilisateur",
               role: data.role || "Utilisateur",
               secondRole: data.secondRole || null,
               schoolId: data.schoolId || null,
-            });
+            };
+
+            if (userData.role === "professeur" && userData.schoolId) {
+              const titulairesRef = collection(db, "schools", userData.schoolId, "titulaires");
+              const q = query(titulairesRef, where("professeur", "==", userData.name));
+              const snapshot = await getDocs(q);
+              setIsTitulaire(!snapshot.empty);
+            }
+
+            setUser(userData);
           } else {
             let name = firebaseUser.displayName || firebaseUser.email || "Utilisateur";
             let role = "Utilisateur";
@@ -142,74 +85,174 @@ export default function Navleft({ onPageChange }: NavleftProps) {
             }
             setUser({ name, role, secondRole: null });
           }
-        } catch (error: any) {
-          console.error("Erreur lors de la récupération du document utilisateur :", error);
+        } else {
+          setUser(null);
         }
-      } else {
-        setUser(null);
+      } catch (err) {
+        setError("Erreur de chargement des données utilisateur");
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
+
     return () => unsubscribe();
   }, [db]);
 
-  // Vérifier si le professeur est titulaire en recherchant dans la collection "titulaires" de l'école
-  useEffect(() => {
-    const checkTitulaire = async () => {
-      if (user && user.role === "professeur" && user.schoolId) {
-        try {
-          const titulairesRef = collection(db, "schools", user.schoolId, "titulaires");
-          const q = query(titulairesRef, where("professeur", "==", user.name));
-          const snapshot = await getDocs(q);
-          setIsTitulaire(!snapshot.empty);
-        } catch (error: any) {
-          console.error("Erreur lors de la vérification du statut de titulaire :", error);
-        }
+  return { user, loading, isTitulaire, error };
+};
+
+const NavItem = React.memo(({
+  icon,
+  label,
+  onClick,
+  isRed = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  isRed?: boolean;
+}) => (
+  <li>
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={`w-full flex items-center space-x-4 px-4 py-3 rounded-lg transition transform hover:scale-105 duration-200 ${
+        isRed ? "text-red-400 hover:bg-red-500/20" : "text-gray-200 hover:bg-white/10"
+      }`}
+    >
+      <span className={`transition-transform duration-200 ${isRed ? "text-red-400" : "text-blue-400"}`}>
+        {icon}
+      </span>
+      <span className="text-md font-medium">{label}</span>
+    </button>
+  </li>
+));
+
+NavItem.displayName = 'NavItem';
+
+interface NavleftProps {
+  onPageChange: (page: string) => void;
+}
+
+const Navleft = ({ onPageChange }: NavleftProps) => {
+  const router = useRouter();
+  const { user, loading, isTitulaire, error } = useUserData();
+
+  // Navigation Principale
+  const mainNavItems: NavItemData[] = useMemo(() => [
+    { icon: <HomeIcon className="h-6 w-6" />, label: "Accueil", page: "Accueil" },
+    { icon: <Cog6ToothIcon className="h-6 w-6" />, label: "Paramètres", page: "Parametres" },
+  ], []);
+
+  // Espace Professeur
+  const teacherNavItems: NavItemData[] = useMemo(() => [
+    { icon: <ClipboardDocumentListIcon className="h-6 w-6" />, label: "Saisie des notes", page: "SaisieDeNotes" },
+    { icon: <DocumentTextIcon className="h-6 w-6" />, label: "Devoirs", page: "devoirProf" },
+    { icon: <CalendarDays className="h-6 w-6" />, label: "Planning", page: "horaireProf" },
+    { icon: <BookOpenIcon className="h-6 w-6" />, label: "Mes cours", page: "ListeDesCours" },
+    { icon: <ClockIcon className="h-6 w-6" />, label: "Examens", page: "HorairedesexamensProf" },
+  ], []);
+
+  // Espace Élève
+  const studentNavItems: NavItemData[] = useMemo(() => [
+    { icon: <AcademicCapIcon className="h-6 w-6" />, label: "Bulletin", page: "bulletin" },
+    { icon: <CalendarDays className="h-6 w-6" />, label: "Horaire", page: "horaireEleve" },
+    { icon: <BookCheck className="h-6 w-6" />, label: "Devoirs", page: "devoirEleve" },
+    { icon: <BookTemplate className="h-6 w-6" />, label: "Cours", page: "cours" },
+    { icon: <ClockIcon className="h-6 w-6" />, label: "Examens", page: "HorairedesexamensEleve" },
+  ], []);
+
+  // Espace Titulaire
+  const titulaireNavItems: NavItemData[] = useMemo(() => [
+    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Gestion des classes", page: "listeclasses" },
+  ], []);
+
+  // Administration Scolaire
+  const schoolNavItems: NavItemData[] = useMemo(() => [
+    { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscriptions", page: "EnregistrementEleve" },
+    { icon: <UsersIcon className="h-6 w-6" />, label: "Enseignants", page: "EnregistrementProfesseur" },
+    { icon: <BookKey className="h-6 w-6" />, label: "Programmation", page: "ClassesEtCours" },
+    { icon: <UsersIcon className="h-6 w-6" />, label: "Personnel", page: "listeprof" },
+    { icon: <ChartBarIcon className="h-6 w-6" />, label: "Effectifs", page: "elevesparclasse" },
+  ], []);
+
+  // Comptabilité
+  const comptableNavItems: NavItemData[] = useMemo(() => [
+    { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscriptions", page: "EnregistrementEleve" },
+    { icon: <ChartBarIcon className="h-6 w-6" />, label: "Statistiques", page: "elevesparclasse" },
+    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Finances", page: "finances" },
+  ], []);
+
+  const logoutItem: NavItemData = useMemo(() => ({
+    icon: <ArrowLeftOnRectangleIcon className="h-6 w-6" />,
+    label: "Déconnexion",
+    page: "Deconnexion",
+    isRed: true,
+  }), []);
+
+  const getNavSections = (): NavSection[] => {
+    const sections: NavSection[] = [{ title: "Navigation", items: mainNavItems }];
+
+    if (!user) return sections;
+
+    if (user.role === "professeur" && user.secondRole === "comptable") {
+      sections.push({ title: "Comptabilité", items: comptableNavItems });
+    }
+
+    if (user.role === "professeur") {
+      sections.push({ title: "Enseignement", items: teacherNavItems });
+      if (isTitulaire) {
+        sections.push({ title: "Titulariat", items: titulaireNavItems });
       }
-    };
-    checkTitulaire();
-  }, [user, db]);
+    }
 
-  if (loading) return <div>Chargement...</div>;
+    if (user.role === "élève") {
+      sections.push({ title: "Scolarité", items: studentNavItems });
+    }
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/");
+    if (user.role === "école") {
+      sections.push({ title: "Administration", items: schoolNavItems });
+    }
+
+    return sections;
   };
 
-  // Définition des sections de navigation selon le rôle
-  const navSections = [{ title: "Navigation", items: mainNavItems }];
-
-  if (user?.role === "professeur" && user.secondRole === "comptable") {
-    navSections.push({ title: "Comptabilité", items: comptableNavItems });
-  }
-
-  if (user?.role === "professeur") {
-    navSections.push({ title: "Pédagogie", items: teacherNavItems });
-    // Ajout de la section "Titulaire" si le professeur est identifié comme tel
-    if (isTitulaire) {
-      navSections.push({ title: "Titulaire", items: titulaireNavItems });
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push("/");
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion:", err);
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-64 p-6 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
-  if (user?.role === "élève") {
-    navSections.push({ title: "Bulletin", items: studentNavItems });
+  if (error) {
+    return <div className="w-64 p-6 text-red-500">{error}</div>;
   }
 
-  if (user?.role === "école") {
-    navSections.push({ title: "Scolarité", items: schoolNavItems });
-  }
+  const navSections = getNavSections();
 
   return (
     <aside className="w-64 transform scale-90 md:scale-100 p-6 mt-5 ml-4 mr-4 bg-white/10 backdrop-blur-md shadow-xl border-r border-white/20">
-      <div className="flex items-center space-x-4 p-2 bg-white/20 rounded-xl mb-10">
-        <UserCircleIcon className="h-12 w-12 text-cyan-400" />
-        <div>
-          <p className="text-sm font-semibold text-white uppercase">{user?.name}</p>
-          <p className="text-sm text-gray-300">{user?.role}</p>
-          {user?.secondRole && <p className="text-xs text-gray-400">{user.secondRole}</p>}
+      {user && (
+        <div className="flex items-center space-x-4 p-2 bg-white/20 rounded-xl mb-10">
+          <UserCircleIcon className="h-12 w-12 text-cyan-400" />
+          <div>
+            <p className="text-sm font-semibold text-white uppercase">{user.name}</p>
+            <p className="text-sm text-gray-300">{user.role}</p>
+            {user.secondRole && <p className="text-xs text-gray-400">{user.secondRole}</p>}
+          </div>
         </div>
-      </div>
+      )}
 
       <nav className="space-y-8">
         {navSections.map((section) => (
@@ -244,4 +287,6 @@ export default function Navleft({ onPageChange }: NavleftProps) {
       </nav>
     </aside>
   );
-}
+};
+
+export default React.memo(Navleft);
