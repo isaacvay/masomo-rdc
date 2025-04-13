@@ -79,3 +79,17 @@ export const extractTimePart = (dateInput: any): string => {
     return '';
   }
 };
+
+export const formatDate = (dateString: string): string => {
+  const dateObj = new Date(dateString);
+  if (isNaN(dateObj.getTime())) return dateString;
+  return dateObj.toLocaleString('fr-FR', {
+    weekday: 'short',    // ex. "lun."
+    day: 'numeric',      // ex. "14"
+    month: 'long',       // ex. "mars"
+    year: 'numeric',     // ex. "2025"
+    hour: '2-digit',     // ex. "09"
+    minute: '2-digit',   // ex. "30"
+  });
+};
+
