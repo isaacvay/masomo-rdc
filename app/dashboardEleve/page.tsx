@@ -24,6 +24,8 @@ import ListeDisp from "../components/dashbordcomp/classes/listeDisp";
 import Horaire from "../components/dashbordcomp/classes/horaire";
 import HoraireExam from "../components/dashbordcomp/classes/horaireExam";
 import Interro from "../components/dashbordcomp/eleve/Interro";
+import DevoirProf from "../components/dashbordcomp/prof/DevoirCoursProf";
+import DevoirEleve from "../components/dashbordcomp/eleve/DevoirEleve";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
@@ -112,7 +114,22 @@ export default function DashboardFullScreen() {
       content = <ListeDesCours />;
       break;
     case "cours":
-      content = <EleveListeDesCours />;
+    content = (
+      <EleveListeDesCours
+        devoir={{
+          id: "",
+          titre: "",
+          date: "",
+          matiere: "",
+          statut: "",
+          questions: [],
+          hasSubmitted:false
+        }}
+        onBack={() => setSelectedPage("SaisieDeNotes")}
+        initialReponses={[]}
+        schoolId=""
+      />
+    );
       break;
     case "listeclasses":
       content = <BulletinListeEleve />;
@@ -123,6 +140,12 @@ export default function DashboardFullScreen() {
     case "horaireProf":
       content = <HoraireProf />;
       break;
+      case "devoirProf":
+        content = <DevoirProf />;
+        break;
+        case "devoirEleve":
+          content = <DevoirEleve />;
+          break;
     case "horaireEleve":
       content = <HoraireDeLEleve />;
       break;
