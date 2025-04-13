@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, firestore } from '@/config/firebase';
+import { formatDate } from '../../devoir/utils';
 
 export interface OptionQCM {
   id: number;
@@ -228,7 +229,7 @@ export default function DevoirQ({ devoir, onBack, initialReponses, schoolId }: D
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                {devoir.date}
+               {formatDate(devoir.date)}
               </span>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium ${
