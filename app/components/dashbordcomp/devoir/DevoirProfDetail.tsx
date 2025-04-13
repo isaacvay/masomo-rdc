@@ -1,7 +1,8 @@
-// DevoirProfDetail.tsx
 import React from 'react';
 import { Devoir } from './DevoirProf';
 import QuestionProf from './QuestionProf';
+import { formatDate } from './utils';
+
 
 const statusClasses = {
   "À rendre": "bg-amber-100 text-amber-800",
@@ -15,6 +16,8 @@ interface DevoirProfDetailProps {
   onShowCorrection: () => void;
   onEdit: () => void; // Callback pour passer en mode édition
 }
+
+
 
 const DevoirProfDetail: React.FC<DevoirProfDetailProps> = ({ devoir, onBack, onShowCorrection, onEdit }) => {
   return (
@@ -48,7 +51,7 @@ const DevoirProfDetail: React.FC<DevoirProfDetailProps> = ({ devoir, onBack, onS
             <p className="text-indigo-700 font-medium">{devoir.matiere}</p>
           </div>
           <div className="flex items-center gap-3">
-            <time className="text-sm text-gray-600">{devoir.date}</time>
+            <time className="text-sm text-gray-600">{formatDate(devoir.date)}</time>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
               statusClasses[devoir.statut as keyof typeof statusClasses] || statusClasses.default
             }`}>
