@@ -165,7 +165,7 @@ const Navleft = ({ onPageChange }: NavleftProps) => {
 
   // Espace Titulaire
   const titulaireNavItems: NavItemData[] = useMemo(() => [
-    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Gestion des classes", page: "listeclasses" },
+    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Gestion", page: "listeclasses" },
   ], []);
 
   // Administration Scolaire
