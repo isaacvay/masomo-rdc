@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import {
   UserCircleIcon,
   LockClosedIcon,
-  SwatchIcon,
   ChevronRightIcon,
-  CheckIcon,
   EnvelopeIcon,
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
-import { getAuth, updatePassword } from 'firebase/auth';
-// Importer les composants refactorés
+import { 
+  getAuth, 
+  updatePassword, 
+  EmailAuthProvider, 
+  reauthenticateWithCredential 
+} from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import SectionHeader from './subcomponents/SectionHeader';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 type Theme = {
   name: string;
@@ -20,13 +22,13 @@ type Theme = {
 };
 
 type FormData = {
-  email: string;
+  email: string;       
   username: string;
   theme: Theme;
   twoFactor: boolean;
   password: string;
   newPassword: string;
-  confirmPassword: string; // Champ de confirmation ajouté
+  confirmPassword: string;
 };
 
 type Section = {
@@ -41,7 +43,7 @@ export default function Parametres() {
   const user = auth.currentUser;
   // Initialiser Firestore
   const db = getFirestore();
-  
+
   // Initialisation du formData en fonction de l'utilisateur connecté
   const [formData, setFormData] = useState<FormData>({
     email: user?.email || 'user@example.com',
@@ -50,7 +52,7 @@ export default function Parametres() {
     twoFactor: false,
     password: '',
     newPassword: '',
-    confirmPassword: '', // Initialisation du champ de confirmation
+    confirmPassword: '',
   });
 
   // Récupérer les données depuis la collection "users"
@@ -77,7 +79,7 @@ export default function Parametres() {
   const [status, setStatus] = useState<{ 
     loading: boolean; 
     error: string | null; 
-    success: boolean 
+    success: boolean;
   }>({ 
     loading: false, 
     error: null, 
@@ -86,7 +88,6 @@ export default function Parametres() {
   
   const [dirty, setDirty] = useState(false);
 
-  // On conserve la navigation mais on désactive les modifications sur toutes les sections sauf "confidentialite"
   const sections: Section[] = [
     { id: 'compte', icon: <UserCircleIcon className="h-5 w-5" />, label: 'Compte' },
     { id: 'confidentialite', icon: <LockClosedIcon className="h-5 w-5" />, label: 'Sécurité' },
@@ -99,6 +100,59 @@ export default function Parametres() {
     }
   }, [status.success]);
 
+  // Fonction de ré-authentification
+  async function reauthenticateUser(): Promise<boolean> {
+    // Messages d'erreur centralisés pour une meilleure maintenabilité
+    const ERROR_MESSAGES = {
+      MISSING_CREDENTIALS: "Veuillez entrer votre mot de passe actuel pour continuer",
+      INVALID_CREDENTIALS: "Mot de passe incorrect. Veuillez réessayer",
+      TOO_MANY_ATTEMPTS: "Trop de tentatives échouées. Veuillez réessayer plus tard",
+      GENERIC_ERROR: "Une erreur est survenue lors de la vérification. Veuillez réessayer"
+    };
+  
+    if (!user?.email || !formData.password) {
+      setStatus({
+        loading: false,
+        error: ERROR_MESSAGES.MISSING_CREDENTIALS,
+        success: false
+      });
+      return false;
+    }
+  
+    try {
+      const credential = EmailAuthProvider.credential(user.email, formData.password);
+      await reauthenticateWithCredential(user, credential);
+      return true;
+      
+    } catch (reauthError: unknown) {
+      console.error("Échec de la ré-authentification", reauthError);
+  
+      let userFriendlyMessage = ERROR_MESSAGES.GENERIC_ERROR;
+      
+      if (reauthError instanceof Error) {
+        const errorWithCode = reauthError as Error & { code?: string };
+        switch (errorWithCode.code) {
+          case 'auth/wrong-password':
+            userFriendlyMessage = ERROR_MESSAGES.INVALID_CREDENTIALS;
+            break;
+          case 'auth/too-many-requests':
+            userFriendlyMessage = ERROR_MESSAGES.TOO_MANY_ATTEMPTS;
+            break;
+          // Ajouter d'autres cas spécifiques au besoin
+        }
+      }
+  
+      setStatus({ 
+        loading: false, 
+        error: userFriendlyMessage, 
+        success: false 
+      });
+      
+      return false;
+    }
+  }
+  
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus({ loading: true, error: null, success: false });
@@ -108,27 +162,31 @@ export default function Parametres() {
       setStatus({ loading: false, error: 'Les mots de passe ne correspondent pas', success: false });
       return;
     }
-
+    
+    // Ré-authentifier l'utilisateur avant de procéder
+    const reauthSuccessful = await reauthenticateUser();
+    if (!reauthSuccessful) return;
+    
     try {
       if (user && formData.newPassword) {
-        // Met à jour le mot de passe via Firebase Auth
+        // Mise à jour du mot de passe via Firebase Auth
         await updatePassword(user, formData.newPassword);
-        // Met à jour le document Firestore en écrasant l'ancien mot de passe
-        await updateDoc(doc(db, 'users', user.uid), { password: formData.newPassword });
+        // Stockage du nouveau mot de passe dans Firestore (en clair)
+        await setDoc(doc(db, 'users', user.uid), { password: formData.newPassword }, { merge: true });
       }
       
-      // Simulation d'un délai
+      // Simulation d'un délai (optionnel)
       await new Promise(resolve => setTimeout(resolve, 1000));
       setStatus({ loading: false, error: null, success: true });
       // Réinitialiser les champs de mot de passe
       setFormData(prev => ({ ...prev, password: '', newPassword: '', confirmPassword: '' }));
       setDirty(false);
     } catch (error) {
-      console.error(error);
+      console.error("Erreur lors de la mise à jour du mot de passe", error);
       setStatus({ loading: false, error: 'Échec de la sauvegarde', success: false });
     }
   };
-
+  
   const handleCancel = () => {
     // Réinitialiser uniquement les champs relatifs au mot de passe
     setFormData(prev => ({ ...prev, password: '', newPassword: '', confirmPassword: '' }));
