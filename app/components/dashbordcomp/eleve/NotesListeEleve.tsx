@@ -11,6 +11,7 @@ import {
   setDoc,
   getDoc,
 } from "firebase/firestore";
+import { Printer } from "lucide-react";
 
 type Student = {
   uid: string;
@@ -44,7 +45,6 @@ export default function ListeEleve({
   const [currentMaxima, setCurrentMaxima] = useState<number[]>([]);
   const [schoolUid, setSchoolUid] = useState<string | null>(null);
 
-  // Récupération du schoolUid pour un compte professeur
   useEffect(() => {
     const loadSchoolUid = async () => {
       const currentUser = auth.currentUser;
@@ -74,7 +74,6 @@ export default function ListeEleve({
     loadSchoolUid();
   }, []);
 
-  // Met à jour les maxima en fonction du cours et de la classe sélectionnés
   useEffect(() => {
     const section = sections.find(
       (s) =>
@@ -85,7 +84,6 @@ export default function ListeEleve({
     setCurrentMaxima(subject?.maxima || []);
   }, [selectedCourse, selectedClass]);
 
-  // Chargement des élèves depuis la collection "users"
   useEffect(() => {
     const loadStudents = async () => {
       if (!schoolUid) return;
@@ -110,7 +108,6 @@ export default function ListeEleve({
     loadStudents();
   }, [selectedClass, schoolUid]);
 
-  // Chargement des notes depuis la sous-collection "grades" de l'école
   useEffect(() => {
     const loadGrades = async () => {
       if (!schoolUid) return;
@@ -127,7 +124,6 @@ export default function ListeEleve({
           const entry = docSnap.data();
           if (Array.isArray(entry.grades)) {
             entry.grades.forEach((note: any, i: number) => {
-              // On convertit systématiquement en chaîne
               loadedGrades[`${entry.numPerm}-${i}`] = note.toString();
             });
           }
@@ -141,18 +137,15 @@ export default function ListeEleve({
     loadGrades();
   }, [selectedCourse, selectedClass, schoolUid]);
 
-  // Mise à jour d'une note pour un élève donné
   const handleGradeChange = (numPerm: string, index: number, value: string) => {
     const maximaIndices = [0, 1, 2, 4, 5, 6];
     const max = currentMaxima[maximaIndices[index]] || 0;
-    // On retire les caractères non numériques
     const cleanedValue = value.replace(/[^0-9]/g, "");
     if (cleanedValue && parseInt(cleanedValue, 10) > max) {
       setToast(`La note maximale autorisée est ${max}`);
       setTimeout(() => setToast(""), 3000);
       return;
     }
-    // Limiter la saisie à la longueur du maximum
     const maxLength = max.toString().length;
     const truncatedValue = cleanedValue.slice(0, maxLength);
     setGrades((prev) => ({
@@ -161,37 +154,31 @@ export default function ListeEleve({
     }));
   };
 
-  // Sauvegarde des notes pour un élève dans la sous-collection "grades" de l'école
   const handleSave = async (student: Student) => {
     try {
-      // Récupération des notes dans l'ordre des colonnes (6 valeurs)
       const studentGrades = Array.from({ length: 6 }, (_, i) =>
         (grades[`${student.numPerm}-${i}`] || "").toString()
       );
-  
-      // Vérifier que toutes les notes ne sont pas vides
+
       if (studentGrades.every((grade) => grade.trim() === "")) {
         setToast("Impossible d'enregistrer, tous les champs sont vides.");
         setTimeout(() => setToast(""), 3000);
         return;
       }
-  
+
       if (!schoolUid) {
         throw new Error("Aucune école connectée");
       }
-  
       if (!student.numPerm) {
         throw new Error("L'élève n'a pas de numéro de permis valide");
       }
-  
+
       setActionStatus((prev) => ({ ...prev, [student.numPerm]: "saving" }));
-  
-      // Préparation des notes : conversion des chaînes vides en "0"
+
       const preparedGrades = studentGrades.map((grade) =>
         grade.trim() === "" ? "0" : grade.trim()
       );
-  
-      // Vérification que les notes ne dépassent pas les maxima
+
       const maximaIndices = [0, 1, 2, 4, 5, 6];
       preparedGrades.forEach((grade, index) => {
         const max = currentMaxima[maximaIndices[index]] || 0;
@@ -199,8 +186,7 @@ export default function ListeEleve({
           throw new Error(`La note ${grade} dépasse le maximum autorisé de ${max}`);
         }
       });
-  
-      // Sauvegarde du document agrégé dans "schools/{schoolUid}/grades/{numPerm}_{selectedCourse}"
+
       const gradeDocRef = doc(
         firestore,
         "schools",
@@ -208,7 +194,7 @@ export default function ListeEleve({
         "grades",
         `${student.numPerm}_${selectedCourse}`
       );
-  
+
       await setDoc(
         gradeDocRef,
         {
@@ -221,15 +207,12 @@ export default function ListeEleve({
         },
         { merge: true }
       );
-  
-      // Référence à la sous-collection "Interro" de l'élève
+
       const interroCollectionRef = collection(
         firestore,
         `schools/${schoolUid}/students/${student.uid}/Interro`
       );
-  
-      // Pour le premier semestre :
-      // - Tests : indices 0 et 1 dans la collection "period1"
+
       preparedGrades.slice(0, 2).forEach((grade, idx) => {
         setDoc(
           doc(interroCollectionRef, `${selectedCourse}.period1.test${idx}`),
@@ -246,13 +229,13 @@ export default function ListeEleve({
           { merge: true }
         );
       });
-      // - Examen : indice 2 enregistré dans "period5" avec period: 5
+
       setDoc(
         doc(interroCollectionRef, `${selectedCourse}.period5.exam`),
         {
           value: parseFloat(preparedGrades[2]),
           date: new Date(),
-          period: 5, // Correction : utilise 5 au lieu de 1
+          period: 5,
           testNumber: "exam",
           course: selectedCourse,
           class: selectedClass,
@@ -261,9 +244,7 @@ export default function ListeEleve({
         },
         { merge: true }
       );
-  
-      // Pour le second semestre :
-      // - Tests : indices 3 et 4 dans "period2"
+
       preparedGrades.slice(3, 5).forEach((grade, idx) => {
         setDoc(
           doc(interroCollectionRef, `${selectedCourse}.period2.test${idx}`),
@@ -280,13 +261,13 @@ export default function ListeEleve({
           { merge: true }
         );
       });
-      // - Examen : indice 5 enregistré dans "period6" avec period: 6
+
       setDoc(
         doc(interroCollectionRef, `${selectedCourse}.period6.exam`),
         {
           value: parseFloat(preparedGrades[5]),
           date: new Date(),
-          period: 6, // Correction : utilise 6 au lieu de 2
+          period: 6,
           testNumber: "exam",
           course: selectedCourse,
           class: selectedClass,
@@ -295,7 +276,7 @@ export default function ListeEleve({
         },
         { merge: true }
       );
-  
+
       setActionStatus((prev) => ({ ...prev, [student.numPerm]: "saved" }));
       setToast("Sauvegarde réussie");
     } catch (error) {
@@ -306,14 +287,10 @@ export default function ListeEleve({
       setTimeout(() => setToast(""), 3000);
     }
   };
-  
 
-  // Sauvegarde de toutes les notes des élèves affichés
   const handleSaveAll = async () => {
     try {
-      await Promise.all(
-        filteredStudents.map((student) => handleSave(student))
-      );
+      await Promise.all(filteredStudents.map((student) => handleSave(student)));
       setToast("Sauvegarde de tous les élèves réussie");
     } catch (error) {
       console.error("Erreur lors de la sauvegarde globale:", error);
@@ -328,6 +305,10 @@ export default function ListeEleve({
       student.classe.toLowerCase() === selectedClass.toLowerCase() &&
       student.displayName.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   if (isLoading) {
     return (
@@ -347,12 +328,13 @@ export default function ListeEleve({
           >
             Retour
           </button>
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {selectedCourse} - {selectedClass}
-            </h1>
-            <p className="text-lg mb-2">Liste d'Élèves</p>
+          <div id="print-table" className="overflow-x-auto">
+          {/* Ajout de l'en-tête spécifique pour l'impression */}
+          <div className="text-center mb-4">
+            <h1 className="text-3xl font-bold">{selectedCourse} - {selectedClass}</h1>
+            <p className="text-lg">Liste d'Élèves</p>
           </div>
+        </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <input
@@ -362,6 +344,13 @@ export default function ListeEleve({
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-96 p-3 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
+          <button
+            onClick={handlePrint}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+          >
+            <Printer className="w-5 h-5" />
+            <span>Imprimer</span>
+          </button>
         </div>
       </header>
 
@@ -371,116 +360,121 @@ export default function ListeEleve({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded-lg shadow overflow-hidden">
-          <thead className="bg-blue-600 text-white">
-            <tr>
-              <th className="py-4 px-6 text-left">Nom | Postnom | Prénom</th>
-              <th colSpan={3} className="py-4 px-6 text-center">
-                Premier Semestre
-              </th>
-              <th colSpan={3} className="py-4 px-6 text-center">
-                Second Semestre
-              </th>
-              <th className="py-4 px-6">Actions</th>
-            </tr>
-            <tr className="">
-              <th className="py-2 px-4 bg-blue-500"></th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>1ère P</div>
-                <div className="text-sm font-medium">{currentMaxima[0] || null}</div>
-              </th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>2ème P</div>
-                <div className="text-sm font-medium">{currentMaxima[1] || 0}</div>
-              </th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>Exam</div>
-                <div className="text-sm font-medium">{currentMaxima[2] || 0}</div>
-              </th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>3ème P</div>
-                <div className="text-sm font-medium">{currentMaxima[4] || 0}</div>
-              </th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>4ème P</div>
-                <div className="text-sm font-medium">{currentMaxima[5] || 0}</div>
-              </th>
-              <th className="py-2 px-4 text-center bg-blue-500">
-                <div>Exam</div>
-                <div className="text-sm font-medium">{currentMaxima[6] || 0}</div>
-              </th>
-              <th className="py-2 px-4 bg-white">
-                  <button
-                      onClick={() => handleSaveAll()}
-                      disabled={isLoading}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
-                      >
-                      {Object.values(actionStatus).includes("saving")
-                      ? "Enregistrer..."
-                      : "Enregistrer tout"}
-                  </button>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredStudents.length ? (
-              filteredStudents.map((student) => (
-                <tr key={student.numPerm} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-6 font-medium uppercase">{student.displayName}</td>
-                  {[...Array(6).keys()].map((i) => {
-                    const maximaIndices = [0, 1, 2, 4, 5, 6];
-                    const max = currentMaxima[maximaIndices[i]] || 0;
-                    return (
-                      <td key={i} className="py-3 px-4 text-center font-semibold">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={grades[`${student.numPerm}-${i}`] || ""}
-                          onChange={(e) =>
-                            handleGradeChange(student.numPerm, i, e.target.value)
-                          }
-                          onFocus={() => {
-                            if (grades[`${student.numPerm}-${i}`] === "0") {
-                              handleGradeChange(student.numPerm, i, "");
-                            }
-                          }}
-                          className="w-16 mx-auto border rounded-md p-1 text-center focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
-                          style={{
-                            borderColor:
-                              grades[`${student.numPerm}-${i}`]?.length >=
-                              max.toString().length
-                                ? "#ef4444"
-                                : "",
-                          }}
-                          maxLength={max.toString().length}
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="py-4 px-6 flex flex-col sm:flex-row gap-2 justify-center">
-                    <button
-                      onClick={() => handleSave(student)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors"
-                      disabled={actionStatus[student.numPerm] === "saving"}
-                    >
-                      {actionStatus[student.numPerm] === "saving"
-                        ? "Sauvegarde..."
-                        : "Sauvegarder"}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="text-center p-4">
-                  Aucun élève trouvé.
+<div id="print-table" className="overflow-x-auto">
+  <table className="min-w-full bg-white rounded-lg shadow overflow-hidden">
+    <thead className="bg-blue-600 text-white">
+      <tr>
+        <th className="py-4 px-6 text-left">Nom | Postnom | Prénom</th>
+        <th colSpan={3} className="py-4 px-6 text-center">
+          Premier Semestre
+        </th>
+        <th colSpan={3} className="py-4 px-6 text-center">
+          Second Semestre
+        </th>
+        {/* Ajout de la classe action-column ici */}
+        <th className="py-4 px-6 action-column">Actions</th>
+      </tr>
+      <tr>
+        <th className="py-2 px-4 bg-blue-500"></th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>1ère P</div>
+          <div className="text-sm font-medium">{currentMaxima[0] || null}</div>
+        </th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>2ème P</div>
+          <div className="text-sm font-medium">{currentMaxima[1] || 0}</div>
+        </th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>Exam</div>
+          <div className="text-sm font-medium">{currentMaxima[2] || 0}</div>
+        </th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>3ème P</div>
+          <div className="text-sm font-medium">{currentMaxima[4] || 0}</div>
+        </th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>4ème P</div>
+          <div className="text-sm font-medium">{currentMaxima[5] || 0}</div>
+        </th>
+        <th className="py-2 px-4 text-center bg-blue-500">
+          <div>Exam</div>
+          <div className="text-sm font-medium">{currentMaxima[6] || 0}</div>
+        </th>
+        {/* Ajout de la classe action-column ici */}
+        <th className="py-2 px-4 bg-white action-column">
+          <button
+            onClick={() => handleSaveAll()}
+            disabled={isLoading}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            {Object.values(actionStatus).includes("saving")
+              ? "Enregistrer..."
+              : "Enregistrer tout"}
+          </button>
+        </th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-200">
+      {filteredStudents.length ? (
+        filteredStudents.map((student) => (
+          <tr key={student.numPerm} className="hover:bg-gray-50 transition-colors">
+            <td className="py-4 px-6 font-medium uppercase">
+              {student.displayName}
+            </td>
+            {[...Array(6).keys()].map((i) => {
+              const maximaIndices = [0, 1, 2, 4, 5, 6];
+              const max = currentMaxima[maximaIndices[i]] || 0;
+              return (
+                <td key={i} className="py-3 px-4 text-center font-semibold">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={grades[`${student.numPerm}-${i}`] || ""}
+                    onChange={(e) =>
+                      handleGradeChange(student.numPerm, i, e.target.value)
+                    }
+                    onFocus={() => {
+                      if (grades[`${student.numPerm}-${i}`] === "0") {
+                        handleGradeChange(student.numPerm, i, "");
+                      }
+                    }}
+                    className="w-16 mx-auto border rounded-md p-1 text-center focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+                    style={{
+                      borderColor:
+                        grades[`${student.numPerm}-${i}`]?.length >=
+                        max.toString().length
+                          ? "#ef4444"
+                          : "",
+                    }}
+                    maxLength={max.toString().length}
+                  />
                 </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              );
+            })}
+            {/* Ajout de la classe action-column ici */}
+            <td className="py-4 px-6 flex flex-col sm:flex-row gap-2 justify-center action-column">
+              <button
+                onClick={() => handleSave(student)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors"
+                disabled={actionStatus[student.numPerm] === "saving"}
+              >
+                {actionStatus[student.numPerm] === "saving"
+                  ? "Sauvegarde..."
+                  : "Sauvegarder"}
+              </button>
+            </td>
+          </tr>
+        ))
+      ) : (
+        <tr>
+          <td colSpan={8} className="text-center p-4">
+            Aucun élève trouvé.
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
     </div>
   );
 }
