@@ -34,3 +34,48 @@ body {
   .hover\:shadow-indigo-glow:hover {
     box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
   }
+
+/* Styles spécifiques pour l'impression */
+@media print {
+  /* Masque tous les éléments sauf ceux nécessaires pour l'impression */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Affiche uniquement les éléments nécessaires */
+  #print-header,
+  #print-table,
+  #print-header *,
+  #print-table * {
+    visibility: visible;
+  }
+
+  /* Réinitialise la mise en page pour l'impression */
+  #print-header,
+  #print-table {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Style spécifique pour le header d'impression */
+  #print-header {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* Style pour le titre d'impression */
+  #print-header h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  /* Style pour les informations supplémentaires */
+  #print-header div {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 10px;
+  }
+}
