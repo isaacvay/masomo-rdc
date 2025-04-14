@@ -328,13 +328,12 @@ export default function ListeEleve({
           >
             Retour
           </button>
-          <div id="print-table" className="overflow-x-auto">
-          {/* Ajout de l'en-tête spécifique pour l'impression */}
-          <div className="text-center mb-4">
-            <h1 className="text-3xl font-bold">{selectedCourse} - {selectedClass}</h1>
-            <p className="text-lg">Liste d'Élèves</p>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              {selectedCourse} - {selectedClass}
+            </h1>
+            <p className="text-lg mb-2">Liste d'Élèves</p>
           </div>
-        </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <input
