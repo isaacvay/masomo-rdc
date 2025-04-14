@@ -90,7 +90,7 @@ export default function GradeTable({
       </div>
       
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y  divide-gray-200" id="print-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -181,10 +181,10 @@ export default function GradeTable({
         </table>
       </div>
       
-      <div className="mt-4 pb-10 flex flex-wrap items-center justify-end gap-4  mr-5 text-xs text-gray-500">
+      <div className="mt-4 pb-10 flex flex-wrap items-center  mr-5 justify-end gap-4 text-xs text-gray-500">
         {activePeriod < 5 && (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ">
               <div className="w-3 h-3 rounded-full bg-green-100 border border-green-300"></div>
               <span>Moyenne ≥ {courseMax / 2}</span>
             </div>
