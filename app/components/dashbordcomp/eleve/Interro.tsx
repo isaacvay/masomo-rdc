@@ -407,6 +407,10 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
     }
   };
 
+  const handlePrint = () => {
+    window.print(); // Déclenche l'impression de la page
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       {toast && <Toast message={toast.message} type={toast.type} />}
@@ -419,8 +423,9 @@ export default function Interro({ selectedCourse, selectedClass, onRetour }: Int
           isSaving={isSaving}
           isLoading={isLoading}
           handleSave={handleSave}
-          handleSaveAverage={handleSaveAverage}
-        />
+          handleSaveAverage={handleSaveAverage} 
+          handlePrint={handlePrint}
+                 />
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-56 flex-shrink-0">
             <PeriodNavigation activePeriod={activePeriod} setActivePeriod={setActivePeriod} />
