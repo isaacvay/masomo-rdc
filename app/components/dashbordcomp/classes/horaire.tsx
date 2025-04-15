@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { sections } from "@/data/cours";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { jsPDF } from "jspdf";
 
 interface HoraireProps {
   selectedClass: string;
@@ -294,11 +295,56 @@ export default function Horaire({ selectedClass, onRetour }: HoraireProps) {
   };
 
   // Exporter l'horaire en PDF (fonction de base, à compléter avec une librairie comme jsPDF)
-  const exportSchedule = () => {
-    toast.info("Fonctionnalité d'export à implémenter");
-    // À implémenter avec une bibliothèque d'export PDF/Excel
-  };
 
+
+  // Exporter l'horaire en PDF
+  const exportSchedule = () => {
+    // Initialiser un nouveau document PDF
+    const doc = new jsPDF();
+  
+    // Titre du document
+    doc.setFontSize(18);
+    doc.text(`Horaire - ${selectedClass.toUpperCase()}`, 10, 10);
+  
+    // Date et heure de génération
+    const generationDate = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.text(`Généré le: ${generationDate}`, 10, 15);
+  
+    // Position initiale pour le contenu
+    let yPosition = 25;
+  
+    // Parcourir les créneaux horaires et ajouter les données au PDF
+    days.forEach((day) => {
+      doc.setFontSize(12);
+      doc.setTextColor("#0000FF");
+      doc.text(`${day}:`, 10, yPosition);
+      yPosition += 5;
+  
+      timeSlots.forEach((slot) => {
+        if (!slot.isBreak) {
+          const subject = scheduleData[day]?.[slot.start] || "Non défini";
+          doc.setFontSize(10);
+          doc.setTextColor("#000000");
+          doc.text(
+            `${slot.start} - ${slot.end}: ${subject}`,
+            15,
+            yPosition
+          );
+          yPosition += 5;
+        }
+      });
+  
+      // Ajouter un espace entre les jours
+      yPosition += 5;
+    });
+  
+    // Sauvegarder le fichier PDF
+    doc.save(`horaire-${selectedClass}.pdf`);
+  
+    // Notification utilisateur
+    toast.success("Horaire exporté avec succès !");
+  };
   // Afficher l'indicateur de chargement
   if (isLoading) {
     return (
