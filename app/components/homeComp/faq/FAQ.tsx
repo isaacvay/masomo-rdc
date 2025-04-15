@@ -41,6 +41,11 @@ function FAQ() {
       answer:
         "Vous pouvez nous contacter via la page 'Contact' ou envoyer un e-mail à support@masomo.com. Notre équipe est disponible pour répondre à vos questions.",
     },
+    {
+      question: "Les élèves peuvent-ils utiliser MASOMO RDC à l'école ?",
+      answer:
+        "Non, les élèves n'ont pas le droit d'utiliser MASOMO RDC à l'intérieur de l'école. Ils peuvent uniquement accéder à la plateforme depuis chez eux ou en dehors de l'école.",
+    },
   ];
 
   return (
