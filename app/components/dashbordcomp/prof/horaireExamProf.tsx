@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { auth, firestore } from "@/config/firebase";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { FaClock, FaSchool } from "react-icons/fa";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 
-// Interfaces utilisateur et associations
+// ---------------------------------------------------------
+// Interfaces
+// ---------------------------------------------------------
 interface TeacherData {
   displayName: string;
   courses?: string[];
@@ -24,7 +26,6 @@ interface AssociationData {
   classe: string;
 }
 
-// Structure des documents d'horaire d'examens
 interface ExamScheduleData {
   schedules: Record<
     string,
@@ -34,22 +35,21 @@ interface ExamScheduleData {
         startTime: string;
         endTime: string;
         location?: string;
-        examiner?: string;
+        examiner: string[];
       };
       sem2: {
         examDate: string;
         startTime: string;
         endTime: string;
         location?: string;
-        examiner?: string;
+        examiner: string[];
       };
     }
   >;
   classe: string;
 }
 
-// Type pour un item d'horaire d'examen
-interface ExamScheduleItem {
+export interface ExamScheduleItem {
   classe: string;
   subject: string;
   semester: "sem1" | "sem2";
@@ -57,9 +57,12 @@ interface ExamScheduleItem {
   startTime: string;
   endTime: string;
   location?: string;
-  examiner?: string;
+  examiner: string[];
 }
 
+// ---------------------------------------------------------
+// Composant principal HoraireExamProf
+// ---------------------------------------------------------
 export default function HoraireExamProf() {
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null);
   const [associations, setAssociations] = useState<AssociationData[]>([]);
@@ -67,19 +70,25 @@ export default function HoraireExamProf() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  // État pour le filtre de semestre
+  // Filtre de semestre
   const [filterSemester, setFilterSemester] = useState<"all" | "sem1" | "sem2">("all");
 
+  // -------------------------------
   // Récupération des données du professeur
+  // -------------------------------
   useEffect(() => {
     const fetchTeacherData = async () => {
       try {
         const user = auth.currentUser;
         if (!user) throw new Error("Aucun utilisateur connecté");
-        const teacherSnap = await getDoc(doc(firestore, "users", user.uid));
+        const teacherDocRef = doc(firestore, "users", user.uid);
+        const teacherSnap = await getDoc(teacherDocRef);
         if (!teacherSnap.exists()) throw new Error("Professeur non trouvé");
-        setTeacherData(teacherSnap.data() as TeacherData);
+        const data = teacherSnap.data() as TeacherData;
+        console.log("Teacher data récupérée:", data);
+        setTeacherData(data);
       } catch (err: any) {
+        console.error("Erreur lors de la récupération du professeur:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -87,22 +96,20 @@ export default function HoraireExamProf() {
     fetchTeacherData();
   }, []);
 
-  // Récupération des associations dans la sous-collection "associations"
+  // -------------------------------
+  // Récupération des associations
+  // -------------------------------
   useEffect(() => {
     if (!teacherData?.schoolId) return;
     const fetchAssociations = async () => {
       try {
-        const associationsRef = collection(
-          firestore,
-          "schools",
-          teacherData.schoolId,
-          "associations"
-        );
+        const associationsRef = collection(firestore, "schools", teacherData.schoolId, "associations");
         const associationsSnap = await getDocs(associationsRef);
-        setAssociations(
-          associationsSnap.docs.map((doc) => doc.data() as AssociationData)
-        );
+        const assocData = associationsSnap.docs.map((doc) => doc.data() as AssociationData);
+        console.log("Associations récupérées:", assocData);
+        setAssociations(assocData);
       } catch (err: any) {
+        console.error("Erreur lors des associations:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -110,12 +117,14 @@ export default function HoraireExamProf() {
     fetchAssociations();
   }, [teacherData]);
 
-  // Récupération des horaires d'examens pour les classes concernées
+  // -------------------------------
+  // Récupération des horaires d'examens
+  // -------------------------------
   useEffect(() => {
     if (!teacherData || associations.length === 0) return;
     const fetchExamSchedules = async () => {
       try {
-        // Déterminer pour quelles classes et matières le professeur est concerné
+        // Filtrage des associations pour le professeur
         const teacherAssociations = associations.flatMap((assocDoc) =>
           assocDoc.associations
             .filter(
@@ -125,25 +134,22 @@ export default function HoraireExamProf() {
             )
             .map((assoc) => ({ classe: assocDoc.classe, subject: assoc.subject }))
         );
-        // Récupérer la liste unique des classes concernées
+        console.log("Teacher associations:", teacherAssociations);
+
         const classesToFetch = Array.from(new Set(teacherAssociations.map((a) => a.classe)));
+        console.log("Classes à charger:", classesToFetch);
 
         const examItems: ExamScheduleItem[] = [];
 
-        // Pour chaque classe, récupérer le document d'horaires d'examens
         await Promise.all(
           classesToFetch.map(async (classe) => {
-            const examDocRef = doc(
-              firestore,
-              "schools",
-              teacherData.schoolId,
-              "examSchedules",
-              classe
-            );
+            const examDocRef = doc(firestore, "schools", teacherData.schoolId, "examSchedules", classe);
             const examDocSnap = await getDoc(examDocRef);
-            if (!examDocSnap.exists()) return;
+            if (!examDocSnap.exists()) {
+              console.warn(`Aucun document d'examens pour la classe ${classe}`);
+              return;
+            }
             const examData = examDocSnap.data() as ExamScheduleData;
-            // Pour chaque matière, vérifier si le professeur est associé
             Object.entries(examData.schedules).forEach(([subject, schedule]) => {
               const isAssociated = teacherAssociations.some(
                 (a) => a.classe === classe && a.subject === subject
@@ -152,7 +158,7 @@ export default function HoraireExamProf() {
               if (schedule.sem1.examDate && schedule.sem1.startTime && schedule.sem1.endTime) {
                 if (
                   isAssociated ||
-                  (schedule.sem1.examiner && schedule.sem1.examiner === teacherData.displayName)
+                  (schedule.sem1.examiner && schedule.sem1.examiner.includes(teacherData.displayName))
                 ) {
                   examItems.push({
                     classe,
@@ -170,7 +176,7 @@ export default function HoraireExamProf() {
               if (schedule.sem2.examDate && schedule.sem2.startTime && schedule.sem2.endTime) {
                 if (
                   isAssociated ||
-                  (schedule.sem2.examiner && schedule.sem2.examiner === teacherData.displayName)
+                  (schedule.sem2.examiner && schedule.sem2.examiner.includes(teacherData.displayName))
                 ) {
                   examItems.push({
                     classe,
@@ -187,7 +193,8 @@ export default function HoraireExamProf() {
             });
           })
         );
-        // Tri des items par date et heure
+
+        // Tri des items par date puis par heure
         examItems.sort((a, b) => {
           const dateA = new Date(a.examDate);
           const dateB = new Date(b.examDate);
@@ -198,9 +205,11 @@ export default function HoraireExamProf() {
           };
           return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
         });
+        console.log("Exam schedule items:", examItems);
         setExamScheduleItems(examItems);
         setLoading(false);
       } catch (err: any) {
+        console.error("Erreur lors de la récupération des horaires:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -208,7 +217,9 @@ export default function HoraireExamProf() {
     fetchExamSchedules();
   }, [teacherData, associations]);
 
-  // Filtrage des items selon le semestre sélectionné
+  // -------------------------------
+  // Filtrage par semestre
+  // -------------------------------
   const filteredExamItems = useMemo(() => {
     if (filterSemester === "all") return examScheduleItems;
     return examScheduleItems.filter(item => item.semester === filterSemester);
@@ -280,8 +291,7 @@ export default function HoraireExamProf() {
               <div className="p-4 flex justify-between items-center">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-800">
-                    {item.subject} (
-                    {item.semester === "sem1" ? "1er Semestre" : "2ème Semestre"})
+                    {item.subject} ({item.semester === "sem1" ? "1er Semestre" : "2ème Semestre"})
                   </h2>
                   <p className="text-xs text-gray-500">Classe : {item.classe}</p>
                 </div>
@@ -302,9 +312,9 @@ export default function HoraireExamProf() {
                     <span className="font-medium">Salle :</span> {item.location}
                   </div>
                 )}
-                {item.examiner && (
+                {item.examiner && item.examiner.length > 0 && (
                   <div className="mt-2 text-sm text-gray-700">
-                    <span className="font-medium">Surveillant :</span> {item.examiner}
+                    <span className="font-medium">Surveillants :</span> {item.examiner.join(", ")}
                   </div>
                 )}
               </div>
