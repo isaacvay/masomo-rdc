@@ -72,7 +72,7 @@ export default function BulletinEleve() {
   if (!school) return <div>Informations sur l'école non disponibles</div>;
 
   // Si le champ "paiement" est true, afficher un message d'alerte
-  if (student.paiement) {
+  if (!student.paiement) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
         <div className="max-w-xl bg-white shadow-xl rounded-xl p-6 text-center">
