@@ -161,6 +161,7 @@ const Navleft = ({ onPageChange }: NavleftProps) => {
     { icon: <BookCheck className="h-6 w-6" />, label: "Devoirs", page: "devoirEleve" },
     { icon: <BookTemplate className="h-6 w-6" />, label: "Cours", page: "cours" },
     { icon: <ClockIcon className="h-6 w-6" />, label: "Examens", page: "HorairedesexamensEleve" },
+    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Finances", page: "financesEleve" },
   ], []);
 
   // Espace Titulaire
@@ -175,6 +176,7 @@ const Navleft = ({ onPageChange }: NavleftProps) => {
     { icon: <BookKey className="h-6 w-6" />, label: "Programmation", page: "ClassesEtCours" },
     { icon: <UsersIcon className="h-6 w-6" />, label: "Personnel", page: "listeprof" },
     { icon: <ChartBarIcon className="h-6 w-6" />, label: "Effectifs", page: "elevesparclasse" },
+    { icon: <TableCellsIcon className="h-6 w-6" />, label: "Finances", page: "finances" },
   ], []);
 
   // Comptabilité
