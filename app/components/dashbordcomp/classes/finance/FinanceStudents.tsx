@@ -5,7 +5,7 @@ import { auth, firestore } from "@/config/firebase";
 import { collection, doc, getDocs, query, where, updateDoc } from "firebase/firestore";
 import { Search, AlertCircle, Loader2, CheckCheck, DollarSign } from "lucide-react";
 import { FaArrowLeft } from "react-icons/fa";
-import FinanceEleve from "./FinanceEleve"; // Importez votre composant FinanceEleve
+import FinanceEleve from "./FinanceEleve";
 
 interface Student {
   id: string;
@@ -14,7 +14,6 @@ interface Student {
   classe: string;
   paiement?: boolean;
   schoolId: string;
-  // Ajoutez d'autres propriétés nécessaires pour FinanceEleve
 }
 
 interface FinanceStudentsProps {
@@ -30,7 +29,6 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
   const [checkedStates, setCheckedStates] = useState<{ [key: string]: boolean }>({});
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-  // Récupérer les élèves de la classe sélectionnée
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -118,7 +116,6 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
     );
   }
 
-  // Si un élève est sélectionné, afficher le composant FinanceEleve
   if (selectedStudent) {
     return (
       <FinanceEleve 
@@ -130,17 +127,16 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
     );
   }
 
-  // Sinon, afficher la liste des élèves
   return (
-    <div className="p-6 bg-gray-100 rounded-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Gestion financière – {selectedClass}</h2>
+    <div className="p-4 md:p-6 bg-gray-100 rounded-lg">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+        <h2 className="text-lg md:text-xl font-bold">Gestion financière – {selectedClass}</h2>
         {onRetour && (
           <button
             onClick={onRetour}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+            className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg w-full md:w-auto"
           >
-            <FaArrowLeft /> Retour
+            <FaArrowLeft /> <span>Retour</span>
           </button>
         )}
       </div>
@@ -159,9 +155,8 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="grid grid-cols-12 bg-gray-50 p-4 font-semibold border-b">
+        <div className="hidden md:grid md:grid-cols-12 bg-gray-50 p-4 font-semibold border-b">
           <div className="col-span-6">Nom de l'élève</div>
-          <div className="col-span-4">Email</div>
           <div className="col-span-2 text-center">Statut paiement</div>
         </div>
 
@@ -173,10 +168,9 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
                 className="p-4 hover:bg-gray-50 cursor-pointer"
                 onClick={() => handleStudentClick(student)}
               >
-                <div className="grid grid-cols-12 items-center">
-                  <div className="col-span-6 font-medium">{student.displayName}</div>
-                  <div className="col-span-4 text-sm text-gray-600">{student.email}</div>
-                  <div className="col-span-2 flex justify-center">
+                <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-2 md:gap-0">
+                  <div className="md:col-span-6 font-medium uppercase">{student.displayName}</div>
+                  <div className="md:col-span-2 flex justify-start md:justify-center">
                     <div 
                       className="flex items-center gap-2"
                       onClick={(e) => handleCheckboxChange(student.id, e)}
@@ -193,11 +187,11 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
                       <span className="text-sm">
                         {checkedStates[student.id] ? (
                           <span className="text-green-600 flex items-center gap-1">
-                            <CheckCheck className="h-4 w-4" /> Payé
+                            <CheckCheck className="h-4 w-4" /> <span className="hidden sm:inline">Payé</span>
                           </span>
                         ) : (
                           <span className="text-red-600 flex items-center gap-1">
-                            <DollarSign className="h-4 w-4" /> En attente
+                            <DollarSign className="h-4 w-4" /> <span className="hidden sm:inline">En attente</span>
                           </span>
                         )}
                       </span>
