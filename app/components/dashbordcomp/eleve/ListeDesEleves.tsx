@@ -364,7 +364,7 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                             <CheckCheck className="h-5 w-5 transition-opacity opacity-0 peer-checked:opacity-100" />
                           </div>
                           <span className="text-sm font-medium text-gray-600">
-                            {checkedStates[student.id] ? "Pas encore payé" : "Paiement effectué"}
+                            {checkedStates[student.id] ? "Paiement effectué" : "Pas encore payé"}
                           </span>
                         </label>
                         {!isComptable && (
