@@ -394,7 +394,6 @@ export default function FinancesEleve() {
                   "Payé",
                   "Statut",
                   "Restant",
-                  "Méthode",
                 ].map((th) => (
                   <th
                     key={th}
@@ -424,7 +423,6 @@ export default function FinancesEleve() {
                         ? formatMoney(p.montant - p.paye)
                         : "-"}
                     </td>
-                    <td className="px-6 py-4">{p.modePaiement}</td>
                   </tr>
                 );
               })}
