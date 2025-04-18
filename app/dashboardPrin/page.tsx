@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navleft from "../components/dashbordcomp/nav/Navleft";
 import ClassesDashboard from "../components/dashbordcomp/classes/classes";
 import EleveForm from "../components/dashbordcomp/formulaire/EleveForm";
@@ -26,6 +26,8 @@ import HoraireExam from "../components/dashbordcomp/classes/horaireExam";
 import Interro from "../components/dashbordcomp/eleve/Interro";
 import DevoirProf from "../components/dashbordcomp/prof/DevoirCoursProf";
 import DevoirEleve from "../components/dashbordcomp/eleve/DevoirEleve";
+import Finances from "../components/dashbordcomp/classes/Finances";
+import FinancesEleve from "../components/dashbordcomp/eleve/FinancesEleve";
 
 export default function DashboardFullScreen() {
   // États pour gérer la page active et les sélections
@@ -34,6 +36,33 @@ export default function DashboardFullScreen() {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedClassForCourse, setSelectedClassForCourse] = useState<string | null>(null);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [atBottom, setAtBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      setShowScrollButton(scrollTop > 100);
+      setAtBottom(scrollTop + clientHeight >= scrollHeight - 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth'
+    });
+  };
 
   let content;
   switch (selectedPage) {
@@ -125,6 +154,12 @@ export default function DashboardFullScreen() {
     case "bulletin":
       content = <BulletinEleve />;
       break;
+     case "finances":
+        content = <Finances />;
+        break;
+      case "financesEleve":
+          content = <FinancesEleve />;
+          break;
     case "horaireProf":
       content = <HoraireProf />;
       break;
@@ -253,6 +288,25 @@ export default function DashboardFullScreen() {
           className="fixed inset-0 bg-black/50 z-30 md:hidden"
           onClick={() => setIsNavOpen(false)}
         />
+      )}
+
+      {/* Bouton flottant de scroll */}
+      {showScrollButton && (
+        <button
+          onClick={atBottom ? scrollToTop : scrollToBottom}
+          className="fixed right-24 bottom-6 z-50 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-800 transition-colors"
+          aria-label={atBottom ? "Scroll to top" : "Scroll to bottom"}
+        >
+          {atBottom ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </button>
       )}
     </div>
   );
