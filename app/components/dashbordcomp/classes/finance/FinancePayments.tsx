@@ -280,15 +280,15 @@ export default function FinancePayments({ selectedClass }: FinancePaymentsProps)
                     {label}
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
+                  <input
+                      type="text"
                       name={name}
-                      value={(paymentSettings as any)[name] || 0}
+                      value={(paymentSettings as any)[name] || ''}
                       onChange={handleInputChange}
-                      min={0}
-                      step={0.01}
+                      placeholder="0"
                       className="w-full border rounded-md p-2 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+
                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
                       {paymentSettings.currency}
                     </span>
@@ -308,12 +308,11 @@ export default function FinancePayments({ selectedClass }: FinancePaymentsProps)
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
+                    type="text"
                     name="latePaymentFee"
-                    value={paymentSettings.latePaymentFee || 0}
+                    value={paymentSettings.latePaymentFee || ''}
+                    placeholder="0"
                     onChange={handleInputChange}
-                    min={0}
-                    step={0.01}
                     className="w-full border rounded-md p-2 pr-12 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                   />
                   <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
