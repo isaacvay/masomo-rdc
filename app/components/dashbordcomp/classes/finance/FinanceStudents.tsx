@@ -46,8 +46,21 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
 
   const fetchStudents = useCallback(async () => {
     try {
-      const effectiveSchoolId = auth.currentUser?.uid;
+      let effectiveSchoolId = auth.currentUser?.uid;
       if (!effectiveSchoolId) throw new Error("Aucune école connectée");
+
+       const userDocRef = doc(firestore, "users", effectiveSchoolId);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                if (
+                  userData.role === "professeur" &&
+                  userData.secondRole === "comptable" &&
+                  userData.schoolId
+                ) {
+                  effectiveSchoolId = userData.schoolId;
+                }
+              }
 
       const usersRef = collection(firestore, "users");
       const q = query(
@@ -61,8 +74,13 @@ const FinanceStudents: React.FC<FinanceStudentsProps> = ({ selectedClass, onReto
       const studentsData = await Promise.all(snapshot.docs.map(async (docSnap) => {
         const studentData = docSnap.data() as Omit<Student, "id">;
         
-        const studentDoc = await getDoc(doc(firestore, "schools", effectiveSchoolId, "students", docSnap.id));
-        const paymentStatus = studentDoc.exists() ? studentDoc.data()?.paymentStatus : null;
+        const studentDoc = await getDoc(doc(firestore, "schools", effectiveSchoolId as string, "students", docSnap.id));
+        const rawData = studentDoc.data();
+        const paymentStatus = rawData?.paymentStatus ?? {
+          remainingUntilCurrent: rawData?.remainingUntilCurrent,
+          lastUpdated: rawData?.lastUpdated,
+          schoolYear: rawData?.schoolYear
+        };
 
         return { 
           id: docSnap.id, 
