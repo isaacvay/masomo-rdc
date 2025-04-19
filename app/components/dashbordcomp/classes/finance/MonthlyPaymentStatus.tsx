@@ -11,7 +11,8 @@ import {
   updateDoc, 
   addDoc, 
   serverTimestamp,
-  setDoc
+  setDoc,
+  getDoc
 } from "firebase/firestore";
 import { Payment, PaymentSettings } from "./finance";
 import Legend from "./Legend";
@@ -23,6 +24,7 @@ interface MonthlyPaymentStatusProps {
   classe: string;
   schoolId: string;
   studentId: string;
+  onPaymentStatusChange: (remaining: number) => Promise<void>;
 }
 
 const SCHOOL_MONTHS = [
@@ -44,6 +46,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
   classe,
   schoolId,
   studentId,
+  onPaymentStatusChange,
 }) => {
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
   const currentYear = currentDate.getFullYear();
   const initializedRef = useRef(false);
   const [remainingUntilCurrent, setRemainingUntilCurrent] = useState(0);
+  const [paymentStatusUpdated, setPaymentStatusUpdated] = useState(false);
 
   const calculateDueDates = useCallback((year: string) => {
     const [startYear, endYear] = year.split('-').map(Number);
@@ -66,14 +70,36 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
 
   const updateRemainingBalance = useCallback(async (remaining: number) => {
     try {
+      // Arrondi à 2 décimales pour éviter les problèmes de virgule flottante
+      const roundedRemaining = Math.round(remaining * 100) / 100;
+      
+      const paymentStatus = {
+        remainingUntilCurrent: roundedRemaining,
+        lastUpdated: serverTimestamp(),
+        schoolYear: settings?.year || `${currentYear}-${currentYear + 1}`,
+        isPaidUpToDate: roundedRemaining <= 0.01, // Petite marge pour les floats
+        needsPayment: roundedRemaining > 0.01
+      };
+
       const studentRef = doc(firestore, "schools", schoolId, "students", studentId);
-      await updateDoc(studentRef, {
-        "paymentStatus.remainingUntilCurrent": remaining,
-        "paymentStatus.lastUpdated": serverTimestamp(),
-        "paymentStatus.schoolYear": settings?.year || `${currentYear}-${currentYear + 1}`
-      });
+      
+      // Force la mise à jour même si le document existe
+      await setDoc(studentRef, { 
+        paymentStatus 
+      }, { merge: true });
+
+      // Vérification de la mise à jour
+      const docSnap = await getDoc(studentRef);
+      if (docSnap.exists()) {
+        console.log("Statut de paiement mis à jour:", docSnap.data().paymentStatus);
+        setPaymentStatusUpdated(true);
+        return true;
+      }
+      throw new Error("Document non trouvé après mise à jour");
     } catch (error) {
-      console.error("Erreur lors de la mise à jour du solde restant:", error);
+      console.error("Échec de la mise à jour du statut:", error);
+      setError("Échec de la mise à jour du statut de paiement");
+      return false;
     }
   }, [schoolId, studentId, settings, currentYear]);
 
@@ -132,7 +158,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
 
       return updated;
     } catch (error) {
-      console.error(`Error processing payment for ${month} ${year}:`, error);
+      console.error(`Erreur de traitement du paiement pour ${month} ${year}:`, error);
       throw error;
     }
   }, [schoolId, studentId, classe, settings]);
@@ -141,6 +167,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
     if (processingPayments) return false;
 
     setProcessingPayments(true);
+    setPaymentStatusUpdated(false);
     try {
       const today = new Date();
       const currentMonthIndex = SCHOOL_MONTHS.findIndex((_, index) => {
@@ -158,6 +185,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
       let remainingPaid = totalPaid;
       let updatesMade = false;
 
+      // Traitement des paiements pour chaque mois
       for (let i = 0; i < monthsToProcess; i++) {
         const monthName = SCHOOL_MONTHS[i];
         const dueDate = settings.dueDates[i];
@@ -170,24 +198,29 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
         if (updateResult) updatesMade = true;
       }
 
-      // Calcul du reste jusqu'au mois actuel
-      const totalDueUntilCurrent = settings.monthlyAmount * monthsToProcess;
+      // Calcul du montant restant
+      const totalDueUntilCurrent = monthlyAmount * monthsToProcess;
       const newRemainingUntilCurrent = Math.max(0, totalDueUntilCurrent - totalPaid);
+      
+      console.log(`Calcul paiement: ${totalPaid} payé / ${totalDueUntilCurrent} dû = ${newRemainingUntilCurrent} restant`);
+      
       setRemainingUntilCurrent(newRemainingUntilCurrent);
 
-      // Mise à jour dans Firestore
-      if (updatesMade) {
+      // Mise à jour dans Firestore et statut global
+      if (updatesMade || newRemainingUntilCurrent !== remainingUntilCurrent) {
         await updateRemainingBalance(newRemainingUntilCurrent);
+        await onPaymentStatusChange(newRemainingUntilCurrent);
       }
 
       return updatesMade;
     } catch (error) {
-      console.error("Error processing monthly payments:", error);
+      console.error("Erreur lors du traitement des paiements:", error);
+      setError("Erreur lors du traitement des paiements");
       return false;
     } finally {
       setProcessingPayments(false);
     }
-  }, [payments, updateOrCreatePayment, processingPayments, updateRemainingBalance]);
+  }, [payments, updateOrCreatePayment, processingPayments, updateRemainingBalance, remainingUntilCurrent, onPaymentStatusChange]);
 
   const fetchPaymentSettings = useCallback(async () => {
     try {
@@ -225,7 +258,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
         await processMonthlyPayments(parsedSettings);
       }
     } catch (err) {
-      console.error("Erreur lors de la récupération des paramètres:", err);
+      console.error("Erreur de récupération des paramètres:", err);
       setError(err instanceof Error ? err.message : "Une erreur inconnue est survenue");
     } finally {
       setLoading(false);
@@ -373,7 +406,7 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
       <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded">
         <div className="flex items-start gap-2">
           <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
-          <p>Configuration de paiement introuvable pour cette classe.</p>
+          <p>Aucune configuration de paiement trouvée pour cette classe.</p>
         </div>
       </div>
     );
@@ -396,6 +429,11 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
               Mise à jour des paiements...
             </span>
           )}
+          {paymentStatusUpdated && (
+            <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+              Statut actualisé
+            </span>
+          )}
         </p>
       </header>
       
@@ -416,14 +454,14 @@ const MonthlyPaymentStatus: React.FC<MonthlyPaymentStatusProps> = ({
           title={currentSchoolMonth ? `Reste jusqu'à ${currentSchoolMonth}` : "Reste jusqu'au mois actuel"}
           value={remainingUntilCurrent}
           currency={settings.currency}
-          variant={remainingUntilCurrent > 0 ? "warning" : "success"}
+          variant={remainingUntilCurrent <= 0.01 ? "success" : "warning"}
           description={`Sur ${settings.monthlyAmount * monthsDueUntilCurrentCount} ${settings.currency}`}
         />
         <InfoCard
           title="Reste total à payer"
           value={remainingTotal}
           currency={settings.currency}
-          variant={remainingTotal > 0 ? "warning" : "success"}
+          variant={remainingTotal <= 0.01 ? "success" : "warning"}
           description={`Sur ${settings.monthlyAmount * monthsDueCount} ${settings.currency}`}
         /> 
       </div>
