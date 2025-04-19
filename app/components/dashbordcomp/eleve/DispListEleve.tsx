@@ -104,7 +104,7 @@ export default function DispListEleve({ student, schoolInfo, onRetour }: DispLis
 
   // Vue Liste : menu d'options
   return (
-    <section className="p-6 max-w-md mx-auto mt-6 space-y-4">
+    <section className="p-6 max-w-xl mx-auto mt-6 space-y-4">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 uppercase">
           Options pour {student.displayName}
