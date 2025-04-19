@@ -182,7 +182,6 @@ const Navleft = ({ onPageChange }: NavleftProps) => {
   // Comptabilité
   const comptableNavItems: NavItemData[] = useMemo(() => [
     { icon: <UserPlusIcon className="h-6 w-6" />, label: "Inscriptions", page: "EnregistrementEleve" },
-    { icon: <ChartBarIcon className="h-6 w-6" />, label: "Statistiques", page: "elevesparclasse" },
     { icon: <TableCellsIcon className="h-6 w-6" />, label: "Finances", page: "finances" },
   ], []);
 
