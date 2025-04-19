@@ -133,15 +133,15 @@ export default function FinancePayments({ selectedClass }: FinancePaymentsProps)
       const newSettings = { ...prev };
       if (name === "annualAmount") {
         newSettings.annualAmount = value;
-        newSettings.quarterlyAmount = parseFloat((value / 4).toFixed(2));
-        newSettings.monthlyAmount = parseFloat((value / 12).toFixed(2));
+        newSettings.quarterlyAmount = parseFloat((value / 3).toFixed(2));
+        newSettings.monthlyAmount = parseFloat((value / 10).toFixed(2));
       } else if (name === "quarterlyAmount") {
         newSettings.quarterlyAmount = value;
-        newSettings.annualAmount = parseFloat((value * 4).toFixed(2));
+        newSettings.annualAmount = parseFloat((value * 10).toFixed(2));
         newSettings.monthlyAmount = parseFloat((value / 3).toFixed(2));
       } else if (name === "monthlyAmount") {
         newSettings.monthlyAmount = value;
-        newSettings.annualAmount = parseFloat((value * 12).toFixed(2));
+        newSettings.annualAmount = parseFloat((value * 10).toFixed(2));
         newSettings.quarterlyAmount = parseFloat((value * 3).toFixed(2));
       }
       return newSettings;
