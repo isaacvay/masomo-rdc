@@ -133,17 +133,18 @@ export default function FinancePayments({ selectedClass }: FinancePaymentsProps)
       const newSettings = { ...prev };
       if (name === "annualAmount") {
         newSettings.annualAmount = value;
-        newSettings.quarterlyAmount = parseFloat((value / 3).toFixed(2));
-        newSettings.monthlyAmount = parseFloat((value / 10).toFixed(2));
+        newSettings.quarterlyAmount = parseFloat((value / 3).toFixed(2)); // 3 trimestres
+        newSettings.monthlyAmount = parseFloat((value / 10).toFixed(2));  // 10 mois
       } else if (name === "quarterlyAmount") {
         newSettings.quarterlyAmount = value;
-        newSettings.annualAmount = parseFloat((value * 10).toFixed(2));
-        newSettings.monthlyAmount = parseFloat((value / 3).toFixed(2));
+        newSettings.annualAmount = parseFloat((value * 3).toFixed(2));   // 3 trimestres
+        newSettings.monthlyAmount = parseFloat(((value * 3) / 10).toFixed(2)); // 10 mois
       } else if (name === "monthlyAmount") {
         newSettings.monthlyAmount = value;
-        newSettings.annualAmount = parseFloat((value * 10).toFixed(2));
-        newSettings.quarterlyAmount = parseFloat((value * 3).toFixed(2));
+        newSettings.annualAmount = parseFloat((value * 10).toFixed(2));   // 10 mois
+        newSettings.quarterlyAmount = parseFloat(((value * 10) / 3).toFixed(2)); // 3 trimestres
       }
+      
       return newSettings;
     });
   }, []);
