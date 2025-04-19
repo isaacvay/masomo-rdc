@@ -178,22 +178,6 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
     fetchStudents();
   }, [selectedClass]);
 
-  const handleCheckboxChange = async (studentId: string) => {
-    const originalState = checkedStates[studentId];
-    const newState = !originalState;
-
-    // Mise à jour optimiste
-    setCheckedStates((prev) => ({ ...prev, [studentId]: newState }));
-
-    try {
-      const studentDocRef = doc(firestore, "users", studentId);
-      await updateDoc(studentDocRef, { paiement: newState });
-    } catch (e) {
-      console.error("Erreur lors de la mise à jour du paiement :", e);
-      setCheckedStates((prev) => ({ ...prev, [studentId]: originalState }));
-      setError("Échec de la mise à jour du statut de paiement");
-    }
-  };
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -348,28 +332,6 @@ export default function ListeDesEleves({ selectedClass = "7eme", onRetour }: Lis
                             </span>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <label
-                          className="relative flex items-center gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checkedStates[student.id] || false}
-                            onChange={() => handleCheckboxChange(student.id)}
-                            className="peer absolute opacity-0 h-0 w-0"
-                          />
-                          <div className="w-8 h-8 flex justify-center items-center border-2 border-indigo-200 rounded-lg bg-white text-indigo-300 transition-all peer-checked:bg-indigo-600 peer-checked:border-indigo-600 peer-checked:text-white peer-focus:ring-2 peer-focus:ring-indigo-300">
-                            <CheckCheck className="h-5 w-5 transition-opacity opacity-0 peer-checked:opacity-100" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-600">
-                            {checkedStates[student.id] ? "Paiement effectué" : "Pas encore payé"}
-                          </span>
-                        </label>
-                        {!isComptable && (
-                          <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-indigo-600 ml-4 transition-colors" />
-                        )}
                       </div>
                     </div>
                   </li>
