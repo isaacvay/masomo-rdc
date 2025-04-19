@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { sections, Section } from "@/data/cours";
-import { colors } from "@/data/colors";
 import { auth, firestore } from "@/config/firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { FiSearch, FiDollarSign, FiUsers, FiBook, FiChevronRight, FiFilter } from "react-icons/fi";
@@ -24,6 +23,18 @@ interface UserDoc {
 interface FinanceClassesProps {
   onClassSelect: (className: string) => void;
 }
+
+// Nouvelle palette de couleurs pour les catégories
+const categoryColors = [
+  "bg-blue-100 text-blue-800",      // Bleu clair
+  "bg-green-100 text-green-800",    // Vert clair
+  "bg-purple-100 text-purple-800",  // Violet clair
+  "bg-amber-100 text-amber-800",    // Ambre clair
+  "bg-cyan-100 text-cyan-800",      // Cyan clair
+  "bg-pink-100 text-pink-800",      // Rose clair
+  "bg-indigo-100 text-indigo-800",  // Indigo clair
+  "bg-emerald-100 text-emerald-800" // Émeraude clair
+];
 
 const groupByCategory = (sections: Section[]) => {
   const grouped: { [key: string]: { category: string; classes: string[] } } = {};
@@ -284,7 +295,11 @@ const FinanceClasses: React.FC<FinanceClassesProps> = ({ onClassSelect }) => {
                 className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
               >
                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center">
-                  <div className={`h-3 w-3 rounded-full mr-3 ${colors[idx % colors.length]}`} />
+                  <div className={`h-8 w-8 rounded-lg ${categoryColors[idx % categoryColors.length].split(' ')[0]} flex items-center justify-center mr-3`}>
+                    <span className={`text-sm font-medium ${categoryColors[idx % categoryColors.length].split(' ')[1]}`}>
+                      {section.category.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                   <h2 className="text-lg font-semibold text-gray-900">{section.category}</h2>
                   <span className="ml-3 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
                     {section.classes.length} classes
