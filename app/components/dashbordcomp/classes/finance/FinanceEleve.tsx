@@ -1,10 +1,9 @@
 "use client";
-
 import React, { useState, useEffect, useCallback } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { CheckCheck, DollarSign, Plus, Printer } from "lucide-react";
 import { auth, firestore } from "@/config/firebase";
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, setDoc, serverTimestamp } from "firebase/firestore";
 import { FinanceEleveProps, Payment } from "./finance";
 import MonthlyPaymentStatus from "./MonthlyPaymentStatus";
 import PaymentForm from "./PaymentForm";
@@ -48,6 +47,7 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
+  const [remainingUntilCurrent, setRemainingUntilCurrent] = useState(0);
 
   // Fetch school info
   useEffect(() => {
@@ -58,7 +58,7 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
           setSchoolInfo(schoolDoc.data() as SchoolInfo);
         }
       } catch (err) {
-        console.error("Error fetching school info:", err);
+        console.error("Erreur lors de la récupération des informations de l'école:", err);
       }
     };
 
@@ -68,14 +68,27 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
   // Fetch student data and payments
   const fetchStudentData = useCallback(async () => {
     try {
-      const [userDoc, paymentsSnap] = await Promise.all([
+      setIsLoading(true);
+      setError(null);
+
+      const [userDoc, paymentsSnap, studentDoc] = await Promise.all([
         getDoc(doc(firestore, "users", student.id)),
         getDocs(query(
           collection(firestore, "schools", schoolId, "payements"),
           where("studentId", "==", student.id),
           where("classe", "==", classe)
-        ))
+        )),
+        getDoc(doc(firestore, "schools", schoolId, "students", student.id))
       ]);
+
+      // Mettre à jour le statut de paiement
+      if (studentDoc.exists()) {
+        const paymentData = studentDoc.data()?.paymentStatus;
+        if (paymentData) {
+          setPaymentStatus(paymentData.isPaidUpToDate);
+          setRemainingUntilCurrent(paymentData.remainingUntilCurrent || 0);
+        }
+      }
 
       if (userDoc.exists()) {
         const data = userDoc.data();
@@ -96,7 +109,7 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
 
       setPayments(paymentsData);
     } catch (err) {
-      console.error("Error fetching data:", err);
+      console.error("Erreur lors de la récupération des données:", err);
       setError("Impossible de charger les données financières. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
@@ -107,25 +120,61 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
     fetchStudentData();
   }, [fetchStudentData]);
 
+  // Mettre à jour le statut de paiement global
+  const updateGlobalPaymentStatus = useCallback(async (remaining: number) => {
+    try {
+      const isPaidUpToDate = remaining <= 0.01;
+      setPaymentStatus(isPaidUpToDate);
+      setRemainingUntilCurrent(remaining);
+
+      // Mettre à jour dans la collection users
+      const userRef = doc(firestore, "users", student.id);
+      await setDoc(userRef, { 
+        paiement: isPaidUpToDate 
+      }, { merge: true });
+
+      // Mettre à jour dans la collection students
+      const studentRef = doc(firestore, "schools", schoolId, "students", student.id);
+      await setDoc(studentRef, { 
+        paymentStatus: {
+          isPaidUpToDate,
+          remainingUntilCurrent: remaining,
+          lastUpdated: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut global:", error);
+      setError("Erreur lors de la mise à jour du statut de paiement");
+    }
+  }, [schoolId, student.id]);
+
   // Handle payment success
-  const handlePaymentSuccess = useCallback((newPayment: Payment) => {
-    setPaymentStatus(true);
-    setPayments(prev => [newPayment, ...prev]);
-    setSuccess(`Paiement enregistré (réf. ${newPayment.reference}) avec succès`);
-    setShowPaymentForm(false);
-    
-    // Prepare invoice data
-    setInvoiceData({
-      payment: newPayment,
-      student,
-      classe,
-      school: schoolInfo,
-      recordedBy: auth.currentUser?.displayName || auth.currentUser?.email || "Administrateur",
-    });
-    
-    setShowInvoice(true);
-    setTimeout(() => setSuccess(null), 5000);
-  }, [schoolInfo, student]);
+  const handlePaymentSuccess = useCallback(async (newPayment: Payment) => {
+    try {
+      // Mettre à jour les paiements locaux
+      setPayments(prev => [newPayment, ...prev]);
+      setSuccess(`Paiement enregistré (réf. ${newPayment.reference}) avec succès`);
+      setShowPaymentForm(false);
+      
+      // Préparer les données de facture
+      setInvoiceData({
+        payment: newPayment,
+        student,
+        classe,
+        school: schoolInfo,
+        recordedBy: auth.currentUser?.displayName || auth.currentUser?.email || "Administrateur",
+      });
+      
+      setShowInvoice(true);
+      setTimeout(() => setSuccess(null), 5000);
+
+      // Recharger les données pour calculer le nouveau statut
+      await fetchStudentData();
+    } catch (error) {
+      console.error("Erreur après succès du paiement:", error);
+      setError("Erreur lors de la mise à jour du statut");
+    }
+  }, [schoolInfo, student, fetchStudentData]);
 
   // Reset messages
   const resetMessages = useCallback(() => {
@@ -147,7 +196,7 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
               body { font-family: Arial, sans-serif; margin: 20px; }
               .invoice-container { max-width: 800px; margin: 0 auto; }
               .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-              .school-info { flex: 1; }
+              .school-info { flex: 1; uppercase: 1; }
               .invoice-title { text-align: center; margin: 30px 0; font-size: 24px; }
               .invoice-details { margin-bottom: 30px; }
               .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -369,11 +418,15 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
               <p className={`font-medium ${paymentStatus ? "text-green-600" : "text-red-600"} text-sm sm:text-base`}>
                 {paymentStatus ? (
                   <span className="text-green-600 flex items-center gap-1">
-                    <CheckCheck className="h-4 w-4" /> <span className="hidden sm:inline">Payé</span>
+                    <CheckCheck className="h-4 w-4" /> <span className="hidden sm:inline">À jour</span>
                   </span>
                 ) : (
                   <span className="text-red-600 flex items-center gap-1">
-                    <DollarSign className="h-4 w-4" /> <span className="hidden sm:inline">En attente de paiement</span>
+                    <DollarSign className="h-4 w-4" /> 
+                    <span className="hidden sm:inline">
+                      En retard ({remainingUntilCurrent.toLocaleString()} CDF)
+                    </span>
+                    <span className="sm:hidden">En retard</span>
                   </span>
                 )}
               </p>
@@ -389,6 +442,7 @@ const FinanceEleve: React.FC<FinanceEleveProps> = ({
             classe={classe} 
             schoolId={schoolId} 
             studentId={student.id} 
+            onPaymentStatusChange={updateGlobalPaymentStatus}
           />
         </section>
 
