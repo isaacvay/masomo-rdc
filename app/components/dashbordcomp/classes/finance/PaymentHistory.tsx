@@ -3,7 +3,6 @@
 import React from "react";
 import { Payment } from "./finance";
 
-
 interface PaymentHistoryProps {
   payments: Payment[];
 }
@@ -16,6 +15,8 @@ const formatDate = (date: Date) =>
   });
 
 const PaymentHistory: React.FC<PaymentHistoryProps> = ({ payments }) => {
+  const sortedPayments = [...payments].sort((a, b) => b.date.getTime() - a.date.getTime());
+
   return (
     <div className="border rounded-lg overflow-hidden mb-6">
       <table className="min-w-full divide-y divide-gray-200">
@@ -32,8 +33,8 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({ payments }) => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {payments.length > 0 ? (
-            payments.map((p) => (
+          {sortedPayments.length > 0 ? (
+            sortedPayments.map((p) => (
               <tr key={p.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(p.date)}
