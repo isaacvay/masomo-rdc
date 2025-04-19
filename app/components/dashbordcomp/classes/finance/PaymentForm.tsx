@@ -6,7 +6,6 @@ import { doc, updateDoc, collection, setDoc, serverTimestamp, Timestamp } from "
 import { Check, X } from "lucide-react";
 import { Payment, Student } from "./finance";
 
-
 interface PaymentFormProps {
   student: Student;
   schoolId: string;
@@ -47,6 +46,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       const timestamp = Date.now().toString();
       const autoReference = "Ref" + timestamp.slice(-6);
+      const paymentDate = new Date(paymentData.date);
 
       const payementsRef = collection(
         firestore,
@@ -56,7 +56,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       );
       const newDocRef = doc(payementsRef);
       await setDoc(newDocRef, {
-        date: Timestamp.fromDate(new Date(paymentData.date)),
+        date: Timestamp.fromDate(paymentDate),
         amount: Number(paymentData.amount),
         method: paymentData.method,
         reference: autoReference,
@@ -70,7 +70,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       const newPayment: Payment = {
         id: newDocRef.id,
-        date: new Date(paymentData.date),
+        date: paymentDate,
         amount: Number(paymentData.amount),
         method: paymentData.method,
         reference: autoReference,
@@ -85,6 +85,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded-lg bg-gray-50">
