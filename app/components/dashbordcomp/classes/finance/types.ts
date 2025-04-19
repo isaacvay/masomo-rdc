@@ -56,4 +56,5 @@ export const SCHOOL_MONTHS = [
     value: number;
     currency: string;
     variant: "info" | "success" | "warning" | "error";
+    description?: string;
   }
